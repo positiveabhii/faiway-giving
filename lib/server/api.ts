@@ -54,11 +54,22 @@ export async function requireAuth() {
     return { response: jsonError("Your account profile is not ready yet.", 403) };
   }
 
-  if (profile.status !== "active") {
-    return { response: jsonError("This account is not active.", 403) };
+  if (profile.status === "suspended") {
+    return { response: jsonError("This account has been suspended.", 403) };
   }
 
   return { supabase, authUser: data.user, profile };
+}
+
+export async function requireActive() {
+  const auth = await requireAuth();
+  if ("response" in auth) return auth;
+
+  if (auth.profile.status !== "active") {
+    return { response: jsonError("An active membership is required for this action.", 403) };
+  }
+
+  return auth;
 }
 
 export async function requireAdmin() {

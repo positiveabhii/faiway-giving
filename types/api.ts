@@ -56,6 +56,7 @@ export interface AppDataResponse {
   notifications: Notification[];
   userCharitySelections: UserCharitySelection[];
   users: Profile[];
+  billingTransactions: BillingTransaction[];
 }
 
 export interface ScoreCreateRequest {
@@ -146,4 +147,23 @@ export interface MutationResponses {
   charity: Charity;
   charityDelete: { id: string };
   notificationRead: { count: number };
+  paymentOrder: PaymentOrderResponse;
+  paymentVerify: { success: true };
+}
+
+export interface PaymentOrderRequest {
+  plan: "monthly" | "yearly";
+}
+
+export interface PaymentOrderResponse {
+  orderId: string;
+  amount: number;
+  currency: string;
+}
+
+export interface PaymentVerifyRequest {
+  razorpay_order_id: string;
+  razorpay_payment_id: string;
+  razorpay_signature: string;
+  plan: "monthly" | "yearly";
 }

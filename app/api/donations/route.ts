@@ -1,10 +1,10 @@
-import { jsonError, jsonOk, parseJson, requireAuth } from "@/lib/server/api";
+import { jsonError, jsonOk, parseJson, requireAuth, requireActive } from "@/lib/server/api";
 import { donationCreateSchema } from "@/lib/validations/donation";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
-  const auth = await requireAuth();
+  const auth = await requireActive();
   if ("response" in auth) return auth.response;
 
   const body = await parseJson(request, donationCreateSchema);

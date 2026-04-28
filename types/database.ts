@@ -1,7 +1,7 @@
 export type UserRole = 'admin' | 'subscriber';
-export type UserStatus = 'active' | 'suspended';
+export type UserStatus = 'active' | 'suspended' | 'pending_payment';
 export type SubscriptionPlan = 'monthly' | 'yearly';
-export type SubscriptionStatus = 'active' | 'canceled' | 'past_due';
+export type SubscriptionStatus = 'active' | 'canceled' | 'past_due' | 'pending_payment';
 export type ScoreStatus = 'entered' | 'verified' | 'rejected';
 export type DrawStatus = 'upcoming' | 'completed';
 export type PayoutStatus = 'pending' | 'verified' | 'paid';
@@ -18,9 +18,15 @@ export interface Database {
         Relationships: [];
       };
       subscriptions: {
-        Row: { id: string; user_id: string; plan: SubscriptionPlan; status: SubscriptionStatus; next_renewal_date: string; created_at: string; updated_at: string };
-        Insert: { id?: string; user_id: string; plan: SubscriptionPlan; status?: SubscriptionStatus; next_renewal_date: string; created_at?: string; updated_at?: string };
+        Row: { id: string; user_id: string; plan: SubscriptionPlan; status: SubscriptionStatus; next_renewal_date: string | null; created_at: string; updated_at: string; payment_provider: string; payment_reference: string | null; cancelled_at: string | null };
+        Insert: { id?: string; user_id: string; plan: SubscriptionPlan; status?: SubscriptionStatus; next_renewal_date?: string | null; created_at?: string; updated_at?: string; payment_provider?: string; payment_reference?: string | null; cancelled_at?: string | null };
         Update: Partial<Database['public']['Tables']['subscriptions']['Insert']>;
+        Relationships: [];
+      };
+      billing_transactions: {
+        Row: { id: string; user_id: string; subscription_id: string; amount: number; billing_date: string; invoice_reference: string | null; payment_provider: string; payment_reference: string; status: string; created_at: string; updated_at: string };
+        Insert: { id?: string; user_id: string; subscription_id: string; amount: number; billing_date?: string; invoice_reference?: string | null; payment_provider?: string; payment_reference: string; status?: string; created_at?: string; updated_at?: string };
+        Update: Partial<Database['public']['Tables']['billing_transactions']['Insert']>;
         Relationships: [];
       };
       charities: {
@@ -106,3 +112,4 @@ export type DrawWinner = Database['public']['Tables']['draw_winners']['Row'];
 export type WinnerVerification = Database['public']['Tables']['winner_verifications']['Row'];
 export type Notification = Database['public']['Tables']['notifications']['Row'];
 export type PrizePool = Database['public']['Tables']['prize_pools']['Row'];
+export type BillingTransaction = Database['public']['Tables']['billing_transactions']['Row'];

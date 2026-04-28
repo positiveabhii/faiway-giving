@@ -38,9 +38,8 @@ export async function POST(request: Request) {
   }
 
   const userId = authData.user.id;
-  const renewalDate = new Date();
-  renewalDate.setMonth(renewalDate.getMonth() + (body.plan === "yearly" ? 12 : 1));
 
+  // STRICT RULE: Profile status is pending_payment until verification
   const { data: profile, error: profileError } = await writer
     .from("profiles")
     .upsert({
@@ -49,20 +48,21 @@ export async function POST(request: Request) {
       first_name: body.first_name,
       last_name: body.last_name,
       role: "subscriber",
-      status: "active",
+      status: "pending_payment", // Correct state
     }, { onConflict: "id" })
     .select()
     .single();
 
   if (profileError) return jsonError(`Profile synchronization failed: ${profileError.message}`, 500);
 
+  // STRICT RULE: Subscription status is pending_payment, no renewal date yet
   const { data: subscription, error: subscriptionError } = await writer
     .from("subscriptions")
     .upsert({
       user_id: userId,
       plan: body.plan,
-      status: "active",
-      next_renewal_date: renewalDate.toISOString(),
+      status: "pending_payment", // Correct state
+      next_renewal_date: null, // Null until payment
     }, { onConflict: "user_id" })
     .select()
     .single();

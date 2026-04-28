@@ -10,7 +10,7 @@ import * as drawApi from "@/lib/api/draw";
 import * as winnerApi from "@/lib/api/winners";
 import * as notificationApi from "@/lib/api/notifications";
 import { runDrawSimulation, UserDrawEntry } from "@/lib/utils/draw-engine";
-import type { Profile, Subscription, Charity, UserCharitySelection, GolfScore, DrawResult, PrizePool, DrawWinner, WinnerVerification, Notification } from "@/types/database";
+import type { Profile, Subscription, Charity, UserCharitySelection, GolfScore, DrawResult, PrizePool, DrawWinner, WinnerVerification, Notification, BillingTransaction } from "@/types/database";
 import type { DrawMode, DrawSimulationResult } from "@/types/domain";
 
 interface AppDataContextType {
@@ -24,6 +24,7 @@ interface AppDataContextType {
   notifications: Notification[];
   userCharitySelections: UserCharitySelection[];
   users: Profile[];
+  billingTransactions: BillingTransaction[];
   isLoading: boolean;
   error: string | null;
   refreshAll: () => Promise<void>;
@@ -54,6 +55,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [userCharitySelections, setUserCharitySelections] = useState<UserCharitySelection[]>([]);
   const [users, setUsers] = useState<Profile[]>([]);
+  const [billingTransactions, setBillingTransactions] = useState<BillingTransaction[]>([]);
   
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -77,6 +79,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
       setUsers(data.users);
       setVerifications(data.verifications);
       setUserCharitySelections(data.userCharitySelections);
+      setBillingTransactions(data.billingTransactions);
     } catch (err) {
       console.error("[AppData] Fetch failed", err);
       setError("Failed to sync application data.");
@@ -164,7 +167,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AppDataContext.Provider value={{
-      charities, scores, draws, prizePools, subscriptions, winnings, verifications, notifications, userCharitySelections, users,
+      charities, scores, draws, prizePools, subscriptions, winnings, verifications, notifications, userCharitySelections, users, billingTransactions,
       isLoading, error, refreshAll, submitScore, removeScore, updateCharityContribution, submitDonation, markNotificationRead,
       submitProof, approveVerification, rejectVerification, simulateDraw, publishDraw
     }}>

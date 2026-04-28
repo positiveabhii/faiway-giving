@@ -12,6 +12,7 @@ const emptyAuthData = {
   notifications: [],
   userCharitySelections: [],
   users: [],
+  billingTransactions: [],
 } satisfies Omit<AppDataResponse, "charities" | "draws" | "prizePools">;
 
 export async function GET() {
@@ -59,6 +60,7 @@ export async function GET() {
       usersResult,
       verificationsResult,
       selectionsResult,
+      billingResult,
     ] = await Promise.all([
       supabase.from("golf_scores").select("*").order("played_date", { ascending: false }),
       supabase.from("subscriptions").select("*"),
@@ -67,9 +69,10 @@ export async function GET() {
       supabase.from("profiles").select("*").order("created_at", { ascending: false }),
       supabase.from("winner_verifications").select("*").order("created_at", { ascending: false }),
       supabase.from("user_charity_selections").select("*"),
+      supabase.from("billing_transactions").select("*").order("billing_date", { ascending: false }),
     ]);
 
-    const error = scoresResult.error ?? subscriptionsResult.error ?? winningsResult.error ?? notificationsResult.error ?? usersResult.error ?? verificationsResult.error ?? selectionsResult.error;
+    const error = scoresResult.error ?? subscriptionsResult.error ?? winningsResult.error ?? notificationsResult.error ?? usersResult.error ?? verificationsResult.error ?? selectionsResult.error ?? billingResult.error;
     if (error) return jsonError(error.message, 500);
 
     return jsonOk<AppDataResponse>({
@@ -81,18 +84,20 @@ export async function GET() {
       users: usersResult.data ?? [],
       verifications: verificationsResult.data ?? [],
       userCharitySelections: selectionsResult.data ?? [],
+      billingTransactions: billingResult.data ?? [],
     });
   }
 
-  const [scoresResult, subscriptionResult, winningsResult, notificationsResult, selectionResult] = await Promise.all([
+  const [scoresResult, subscriptionResult, winningsResult, notificationsResult, selectionResult, billingResult] = await Promise.all([
     supabase.from("golf_scores").select("*").eq("user_id", authUser.id).order("played_date", { ascending: false }).limit(5),
     supabase.from("subscriptions").select("*").eq("user_id", authUser.id).maybeSingle(),
     supabase.from("draw_winners").select("*").eq("user_id", authUser.id).order("created_at", { ascending: false }),
     supabase.from("notifications").select("*").eq("user_id", authUser.id).order("created_at", { ascending: false }).limit(50),
     supabase.from("user_charity_selections").select("*").eq("user_id", authUser.id).maybeSingle(),
+    supabase.from("billing_transactions").select("*").eq("user_id", authUser.id).order("billing_date", { ascending: false }),
   ]);
 
-  const error = scoresResult.error ?? subscriptionResult.error ?? winningsResult.error ?? notificationsResult.error ?? selectionResult.error;
+  const error = scoresResult.error ?? subscriptionResult.error ?? winningsResult.error ?? notificationsResult.error ?? selectionResult.error ?? billingResult.error;
   if (error) return jsonError(error.message, 500);
 
   return jsonOk<AppDataResponse>({
@@ -102,6 +107,7 @@ export async function GET() {
     winnings: winningsResult.data ?? [],
     notifications: notificationsResult.data ?? [],
     userCharitySelections: selectionResult.data ? [selectionResult.data] : [],
+    billingTransactions: billingResult.data ?? [],
     users: [],
     verifications: [],
   });

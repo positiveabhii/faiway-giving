@@ -7,6 +7,7 @@ import { Calendar, Trash2, AlertCircle, CheckCircle2, Loader2 } from "lucide-rea
 import { motion, AnimatePresence } from "framer-motion";
 import { useAppData } from "@/hooks/useAppData";
 import { useAuth } from "@/hooks/useAuth";
+import { useRouter } from "next/navigation";
 
 function ScoresSkeleton() {
   return (
@@ -22,8 +23,10 @@ function ScoresSkeleton() {
 }
 
 export default function ScoresPage() {
-  const { scores, submitScore, removeScore, isLoading } = useAppData();
+  const { scores, subscriptions, submitScore, removeScore, isLoading } = useAppData();
   const { user } = useAuth();
+  const router = useRouter();
+  
   const [newScore, setNewScore] = useState("");
   const [newDate, setNewDate] = useState("");
   const [error, setError] = useState("");
@@ -31,9 +34,13 @@ export default function ScoresPage() {
   const [submitting, setSubmitting] = useState(false);
 
   const userScores = scores.filter(s => s.user_id === user?.id).sort((a, b) => new Date(b.played_date).getTime() - new Date(a.played_date).getTime());
+  const userSub = subscriptions.find(s => s.user_id === user?.id);
+  const isPremium = userSub?.status === 'active';
 
   const handleAddScore = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isPremium) return;
+    
     setError("");
     setSuccess("");
     const scoreVal = parseInt(newScore);
@@ -58,12 +65,27 @@ export default function ScoresPage() {
     try { await removeScore(id); } catch { setError("Failed to delete score."); }
   };
 
-  // Only block the entire page on bootstrap isLoading
   if (isLoading) return <ScoresSkeleton />;
 
   return (
-    <div className="space-y-8 max-w-5xl mx-auto">
-      <GlassCard className="p-8 border-white/5">
+    <div className="space-y-8 max-w-5xl mx-auto relative">
+      {!isPremium && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center p-6 backdrop-blur-md bg-charcoal-950/40 rounded-3xl">
+          <GlassCard className="max-w-md p-10 text-center border-gold-500/30 shadow-[0_0_50px_rgba(234,179,8,0.15)] animate-in fade-in zoom-in duration-500">
+            <div className="w-20 h-20 bg-gold-500/10 rounded-full flex items-center justify-center mx-auto mb-6 text-gold-500 border border-gold-500/20">
+              <AlertCircle size={40} />
+            </div>
+            <h3 className="text-2xl font-heading font-bold text-white mb-4">Membership Inactive</h3>
+            <p className="text-gray-400 mb-8 leading-relaxed">Your membership is currently inactive. You must have an active subscription to record scores and participate in prize draws.</p>
+            <Button onClick={() => router.push('/dashboard/profile')} className="w-full py-4 shadow-lg shadow-gold-500/20">
+              Activate Membership
+            </Button>
+            <p className="mt-6 text-xs text-gray-500">Already paid? It may take a moment to sync.</p>
+          </GlassCard>
+        </div>
+      )}
+
+      <GlassCard className={`p-8 border-white/5 transition-all duration-500 ${!isPremium ? 'opacity-20 pointer-events-none grayscale' : ''}`}>
         <div className="mb-6">
           <h2 className="text-2xl font-bold text-white mb-2">Record Performance</h2>
           <p className="text-gray-400 text-sm">Please enter one of your 5 most recent Stableford rounds from the last 6 months.</p>
@@ -97,7 +119,7 @@ export default function ScoresPage() {
         </form>
       </GlassCard>
 
-      <div>
+      <div className={!isPremium ? 'opacity-20 pointer-events-none grayscale' : ''}>
         <h3 className="text-xl font-bold text-white mb-6">Current Draw Ticket (Latest 5 Scores)</h3>
 
         {userScores.length === 0 ? (
