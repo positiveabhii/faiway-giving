@@ -5,8 +5,7 @@ import type { Profile } from "@/types/database";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import * as authService from "@/lib/supabase/services/auth.service";
 import * as profileService from "@/lib/supabase/services/profile.service";
-import { createSubscription } from "@/lib/supabase/services/prize.service";
-import { upsertUserCharitySelection } from "@/lib/supabase/services/charity.service";
+import { signupSyncUserProfile } from "@/lib/supabase/services/sync.service";
 import type { Session } from "@supabase/supabase-js";
 
 interface AuthContextType {
@@ -25,69 +24,157 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const loadProfile = useCallback(async (userId: string) => {
-    try {
-      const profile = await profileService.getProfile(userId);
-      setUser(profile);
-    } catch {
+  const loadProfile = useCallback(async (s: Session | null) => {
+    if (!s?.user) {
       setUser(null);
+      return;
+    }
+
+    console.group(`[AuthContext] Loading profile for ${s.user.email}`);
+    try {
+      // Attempt to fetch profile
+      let profile = await profileService.getProfile(s.user.id);
+      
+      // SELF-HEAL: If profile is missing but auth user exists, sync it
+      if (!profile) {
+        console.warn('[AuthContext] Profile missing during load. Triggering self-heal...');
+        const syncResult = await signupSyncUserProfile(
+          s.user.id,
+          s.user.email || '',
+          {
+            first_name: s.user.user_metadata?.first_name || 'User',
+            last_name: s.user.user_metadata?.last_name || '',
+          },
+          'subscriber'
+        );
+        profile = syncResult.profile;
+        console.log('[AuthContext] Self-healing successful');
+      } else {
+        console.log('[AuthContext] Profile loaded successfully');
+      }
+
+      setUser(profile);
+    } catch (err) {
+      console.error('[AuthContext] Profile loading failed:', err);
+      setUser(null);
+    } finally {
+      console.groupEnd();
     }
   }, []);
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
 
+    console.log('[AuthContext] Initializing auth state...');
+
     // Get initial session
     supabase.auth.getSession().then(({ data: { session: s } }) => {
       setSession(s);
-      if (s?.user) {
-        loadProfile(s.user.id).finally(() => setIsLoading(false));
+      if (s) {
+        loadProfile(s).finally(() => {
+          setIsLoading(false);
+          console.log('[AuthContext] Initial session loaded');
+        });
       } else {
         setIsLoading(false);
+        console.log('[AuthContext] No initial session found');
       }
     });
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, s) => {
+      console.log(`[AuthContext] Auth state change: ${event}`);
       setSession(s);
-      if (s?.user) {
-        loadProfile(s.user.id);
+      
+      if (s) {
+        await loadProfile(s);
       } else {
         setUser(null);
       }
+      
+      setIsLoading(false);
     });
 
     return () => subscription.unsubscribe();
   }, [loadProfile]);
 
   const login = async (email: string, password: string): Promise<boolean> => {
+    setIsLoading(true);
     try {
       const { session: s } = await authService.signIn(email, password);
       setSession(s);
-      if (s?.user) await loadProfile(s.user.id);
-      return true;
-    } catch {
+      if (s) {
+        await loadProfile(s);
+        return true;
+      }
       return false;
+    } catch (err) {
+      console.error('[AuthContext] Login failed:', err);
+      return false;
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const signup = async (data: { email: string; password: string; first_name: string; last_name: string; plan: "monthly" | "yearly"; charity_id: string; contribution_percentage: number }): Promise<Profile> => {
-    const { user: authUser } = await authService.signUp(data.email, data.password, { first_name: data.first_name, last_name: data.last_name });
-    if (!authUser) throw new Error("Signup failed");
+  const signup = async (data: { 
+    email: string; 
+    password: string; 
+    first_name: string; 
+    last_name: string; 
+    plan: "monthly" | "yearly"; 
+    charity_id: string; 
+    contribution_percentage: number 
+  }): Promise<Profile> => {
+    console.group('[AuthContext] Starting signup flow');
+    setIsLoading(true);
+    
+    try {
+      // 1. Auth Signup
+      console.log('[AuthContext] Step 1: Auth signup...');
+      const { user: authUser } = await authService.signUp(data.email, data.password, { 
+        first_name: data.first_name, 
+        last_name: data.last_name 
+      });
+      
+      if (!authUser) {
+        throw new Error("Critical: Auth signup failed to return a user record.");
+      }
 
-    const profile = await authService.createProfileOnSignup(authUser.id, data.email, data.first_name, data.last_name);
-    await createSubscription(authUser.id, data.plan);
-    if (data.charity_id) {
-      await upsertUserCharitySelection(authUser.id, data.charity_id, data.contribution_percentage);
+      // 2. Synchronize Profile, Subscription, and Charity Selection
+      console.log('[AuthContext] Step 2: Synchronizing application data...');
+      const syncResult = await signupSyncUserProfile(
+        authUser.id,
+        data.email,
+        {
+          first_name: data.first_name,
+          last_name: data.last_name,
+          plan: data.plan,
+          charity_id: data.charity_id,
+          contribution_percentage: data.contribution_percentage
+        }
+      );
+
+      console.log('[AuthContext] Signup flow completed successfully');
+      setUser(syncResult.profile);
+      return syncResult.profile;
+    } catch (err) {
+      console.error('[AuthContext] Signup flow failed:', err);
+      throw err;
+    } finally {
+      setIsLoading(false);
+      console.groupEnd();
     }
-    setUser(profile);
-    return profile;
   };
 
   const logout = async () => {
-    await authService.signOut();
-    setUser(null);
-    setSession(null);
+    setIsLoading(true);
+    try {
+      await authService.signOut();
+      setUser(null);
+      setSession(null);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

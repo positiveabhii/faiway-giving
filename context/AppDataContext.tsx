@@ -60,7 +60,15 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null);
 
   const fetchAll = useCallback(async () => {
-    if (!user) { setIsLoading(false); return; }
+    if (!user) {
+      setIsLoading(true);
+      const [charData] = await Promise.all([
+        charityService.getAllCharities(),
+      ]);
+      setCharities(charData);
+      setIsLoading(false);
+      return;
+    }
     setIsLoading(true);
     setError(null);
     try {
