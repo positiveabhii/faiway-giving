@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Button } from "@/components/ui/Button";
-import { User, CreditCard, Bell, CheckCircle2, Loader2, Mail, Phone, Calendar, Trash2 } from "lucide-react";
+import { User, CreditCard, Bell, CheckCircle2, Loader2, Mail, Calendar } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useAppData } from "@/hooks/useAppData";
 import * as profileService from "@/lib/supabase/services/profile.service";
@@ -99,13 +99,6 @@ export default function ProfilePage() {
                   <div className="relative">
                     <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600" />
                     <input type="email" value={user.email} className="w-full bg-charcoal-900/50 border border-white/10 rounded-xl px-12 py-3 text-gray-500 cursor-not-allowed" disabled />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-2">Phone Number</label>
-                  <div className="relative">
-                    <Phone size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600" />
-                    <input type="tel" placeholder="+1 (555) 000-0000" className="w-full bg-charcoal-900/50 border border-white/10 rounded-xl px-12 py-3 text-white focus:outline-none focus:border-gold-500/50" />
                   </div>
                 </div>
                 {successMsg && (

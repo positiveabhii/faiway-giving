@@ -16,6 +16,7 @@ interface DonationModalProps {
 
 export function DonationModal({ isOpen, onClose, charityName, charityId, onSubmit }: DonationModalProps) {
   const [amount, setAmount] = useState<string>("25");
+  const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
@@ -25,6 +26,7 @@ export function DonationModal({ isOpen, onClose, charityName, charityId, onSubmi
     if (isNaN(val) || val <= 0) return;
 
     setIsSubmitting(true);
+    setError(null);
     try {
       await onSubmit(val);
       setIsSuccess(true);
@@ -32,8 +34,9 @@ export function DonationModal({ isOpen, onClose, charityName, charityId, onSubmi
         setIsSuccess(false);
         onClose();
       }, 3000);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Donation failed:", err);
+      setError(err.message || "An unexpected error occurred during your donation.");
     } finally {
       setIsSubmitting(false);
     }
@@ -50,7 +53,7 @@ export function DonationModal({ isOpen, onClose, charityName, charityId, onSubmi
             className="absolute inset-0 bg-charcoal-950/80 backdrop-blur-md"
             onClick={onClose}
           />
-          
+
           <motion.div
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -65,7 +68,7 @@ export function DonationModal({ isOpen, onClose, charityName, charityId, onSubmi
                   </div>
                   <h3 className="text-2xl font-bold text-white mb-2">Thank You!</h3>
                   <p className="text-gray-400 leading-relaxed">
-                    Your contribution to <span className="text-white font-medium">{charityName}</span> has been processed. 
+                    Your contribution to <span className="text-white font-medium">{charityName}</span> has been processed.
                     Together, we're making an impact.
                   </p>
                 </div>
@@ -78,7 +81,7 @@ export function DonationModal({ isOpen, onClose, charityName, charityId, onSubmi
                       </div>
                       <h3 className="text-xl font-bold text-white">Make a Donation</h3>
                     </div>
-                    <button 
+                    <button
                       onClick={onClose}
                       className="p-2 text-gray-500 hover:text-white transition-colors"
                     >
@@ -99,11 +102,10 @@ export function DonationModal({ isOpen, onClose, charityName, charityId, onSubmi
                             key={val}
                             type="button"
                             onClick={() => setAmount(val)}
-                            className={`py-3 rounded-xl border transition-all duration-300 font-bold ${
-                              amount === val 
-                                ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' 
-                                : 'bg-white/5 border-white/10 text-gray-400 hover:border-white/20 hover:text-white'
-                            }`}
+                            className={`py-3 rounded-xl border transition-all duration-300 font-bold ${amount === val
+                              ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400'
+                              : 'bg-white/5 border-white/10 text-gray-400 hover:border-white/20 hover:text-white'
+                              }`}
                           >
                             ${val}
                           </button>
@@ -124,6 +126,12 @@ export function DonationModal({ isOpen, onClose, charityName, charityId, onSubmi
                       </div>
                     </div>
 
+                    {error && (
+                      <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 text-red-400 text-sm mb-6">
+                        {error}
+                      </div>
+                    )}
+
                     <div className="bg-emerald-500/5 border border-emerald-500/10 rounded-xl p-4 flex items-start space-x-3">
                       <CheckCircle2 size={18} className="text-emerald-500 mt-0.5" />
                       <p className="text-xs text-gray-400 leading-relaxed">
@@ -131,8 +139,8 @@ export function DonationModal({ isOpen, onClose, charityName, charityId, onSubmi
                       </p>
                     </div>
 
-                    <Button 
-                      type="submit" 
+                    <Button
+                      type="submit"
                       className="w-full py-4 bg-emerald-500 hover:bg-emerald-400 text-charcoal-950 border-none text-lg font-bold shadow-[0_0_20px_rgba(16,185,129,0.3)]"
                       disabled={isSubmitting || !amount || parseFloat(amount) <= 0}
                     >

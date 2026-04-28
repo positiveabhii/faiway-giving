@@ -134,9 +134,14 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
   };
 
   const submitDonation = async (charId: string, amt: number) => {
-    if (!userId) return;
-    await charityService.addDonation(userId, charId, amt);
-    await fetchData();
+    if (!userId) throw new Error("Authentication required to donate");
+    try {
+      await charityService.addDonation(userId, charId, amt);
+      await fetchData();
+    } catch (err) {
+      console.error("[AppData] submitDonation failed:", err);
+      throw err;
+    }
   };
 
   const markNotificationRead = async (id: string) => {

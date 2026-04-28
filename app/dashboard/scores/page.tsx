@@ -22,7 +22,7 @@ function ScoresSkeleton() {
 }
 
 export default function ScoresPage() {
-  const { scores, submitScore, removeScore, isLoading, moduleLoading } = useAppData();
+  const { scores, submitScore, removeScore, isLoading } = useAppData();
   const { user } = useAuth();
   const [newScore, setNewScore] = useState("");
   const [newDate, setNewDate] = useState("");
@@ -74,13 +74,13 @@ export default function ScoresPage() {
               <label className="block text-sm font-medium text-gray-300 mb-2">Date of Round</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none"><Calendar size={18} className="text-gray-500" /></div>
-                <input 
-                  type="date" 
-                  max={new Date().toISOString().split('T')[0]} 
+                <input
+                  type="date"
+                  max={new Date().toISOString().split('T')[0]}
                   min={new Date(new Date().setMonth(new Date().getMonth() - 6)).toISOString().split('T')[0]}
-                  value={newDate} 
-                  onChange={(e) => setNewDate(e.target.value)} 
-                  className="w-full bg-charcoal-900/50 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-white focus:outline-none focus:border-gold-500/50 [color-scheme:dark]" 
+                  value={newDate}
+                  onChange={(e) => setNewDate(e.target.value)}
+                  className="w-full bg-charcoal-900/50 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-white focus:outline-none focus:border-gold-500/50 [color-scheme:dark]"
                 />
               </div>
             </div>
@@ -99,13 +99,8 @@ export default function ScoresPage() {
 
       <div>
         <h3 className="text-xl font-bold text-white mb-6">Current Draw Ticket (Latest 5 Scores)</h3>
-        
-        {moduleLoading.scores ? (
-          <div className="space-y-4">
-            <div className="h-32 bg-charcoal-900/50 rounded-2xl border border-white/5 animate-pulse"></div>
-            <div className="h-32 bg-charcoal-900/50 rounded-2xl border border-white/5 animate-pulse"></div>
-          </div>
-        ) : userScores.length === 0 ? (
+
+        {userScores.length === 0 ? (
           <GlassCard className="p-12 text-center border-white/5 border-dashed">
             <p className="text-gray-500 mb-2">No scores recorded this month.</p>
             <p className="text-sm text-gray-600">Submit scores above to build your ticket.</p>

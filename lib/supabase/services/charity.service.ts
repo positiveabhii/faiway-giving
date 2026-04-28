@@ -51,12 +51,24 @@ export async function upsertUserCharitySelection(userId: string, charityId: stri
 }
 
 export async function addDonation(userId: string, charityId: string, amount: number) {
+  console.log(`[CharityService] Processing donation: $${amount} to ${charityId}`);
+  
   const { data, error } = await sb()
     .from('charity_donations')
-    .insert({ user_id: userId, charity_id: charityId, amount })
+    .insert({ 
+      user_id: userId, 
+      charity_id: charityId, 
+      amount,
+      created_at: new Date().toISOString()
+    })
     .select()
     .single();
-  if (error) throw error;
+
+  if (error) {
+    console.error('[CharityService] Donation insert failed:', error);
+    throw new Error(error.message || 'Failed to process donation');
+  }
+  
   return data;
 }
 
