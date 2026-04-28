@@ -2,7 +2,7 @@ import type { DrawMode, DrawSimulationResult } from "@/types/domain";
 import { buildTicketsForDraw, evaluateTickets, type TicketEntry } from "@/lib/utils/ticket-engine";
 
 export function deterministicLuckyNumbers(seed: string, mode: DrawMode): number[] {
-  const values: number[] = [23, 26, 27, 28, 29];
+  const values: number[] = [];
   let cursor = 0;
 
   while (values.length < 5) {

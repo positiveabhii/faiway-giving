@@ -5,7 +5,7 @@ export type SubscriptionStatus = 'active' | 'canceled' | 'past_due' | 'pending_p
 export type ScoreStatus = 'entered' | 'verified' | 'rejected';
 export type DrawStatus = 'upcoming' | 'completed';
 export type PayoutStatus = 'pending' | 'verified' | 'paid';
-export type VerificationStatus = 'pending' | 'approved' | 'rejected';
+export type VerificationStatus = 'pending' | 'approved' | 'rejected' | "verified";
 export type MatchType = '5 Matches' | '4 Matches' | '3 Matches';
 
 export interface Database {

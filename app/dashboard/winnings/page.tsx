@@ -98,10 +98,6 @@ export default function WinningsPage() {
                           </div>
                         );
                       })()}
-                      <div className="flex flex-col items-center">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-2 ${win.payout_status === 'paid' ? 'bg-emerald-500 text-charcoal-950 shadow-[0_0_10px_rgba(16,185,129,0.5)]' : 'bg-charcoal-800 text-gray-500 border border-white/10'}`}><CheckCircle2 size={16} /></div>
-                        <span className={`text-xs ${win.payout_status === 'paid' ? 'text-emerald-400 font-medium' : 'text-gray-400'}`}>Paid</span>
-                      </div>
                     </div>
                   </div>
                   {win.payout_status === 'pending' && !win.proof_url && (
@@ -127,9 +123,10 @@ export default function WinningsPage() {
               const verif = verifications.find(v => v.winner_id === win.id);
               const hasProof = !!win.proof_url;
 
+
               // Deterministic Status Derivation
               const isRejected = verif?.status === 'rejected';
-              const isApproved = verif?.status === 'approved';
+              const isApproved = verif?.status === 'approved' || verif?.status === 'verified';
               const isPending = verif?.status === 'pending';
               const isUploading = uploadState === "uploading" && selectedWinnerId === win.id;
 

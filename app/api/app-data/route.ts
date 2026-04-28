@@ -114,8 +114,9 @@ export async function GET() {
     });
   }
 
-  const [scoresResult, subscriptionResult, winningsResult, notificationsResult, selectionResult, donationResult, billingResult] = await Promise.all([
+  const [scoresResult, verificationsResult, subscriptionResult, winningsResult, notificationsResult, selectionResult, donationResult, billingResult] = await Promise.all([
     supabase.from("golf_scores").select("*").eq("user_id", authUser.id).order("played_date", { ascending: false }).limit(50),
+    supabase.from("winner_verifications").select("*").order("created_at", { ascending: false }),
     supabase.from("subscriptions").select("*").eq("user_id", authUser.id).maybeSingle(),
     supabase.from("draw_winners").select("*").eq("user_id", authUser.id).order("created_at", { ascending: false }),
     supabase.from("notifications").select("*").eq("user_id", authUser.id).order("created_at", { ascending: false }).limit(50),
@@ -137,6 +138,6 @@ export async function GET() {
     charityDonations: donationResult.data ?? [],
     billingTransactions: billingResult.data ?? [],
     users: [],
-    verifications: [],
+    verifications: verificationsResult.data ?? [],
   });
 }
