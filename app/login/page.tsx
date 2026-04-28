@@ -6,21 +6,37 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { Button } from "@/components/ui/Button";
 import { ArrowLeft } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const { login } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const { login, user } = useAuth();
+  const router = useRouter();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    const success = await login(email, false);
-    if (success) {
-      window.location.href = "/dashboard";
-    } else {
-      setError("Invalid credentials. Try alexander.s@example.com for mock user.");
+    setLoading(true);
+    try {
+      const success = await login(email, password);
+      if (success) {
+        if (user?.role === "subscriber") {
+          router.push("/dashboard");
+        } else if (user?.role === "admin") {
+          router.push("/admin");
+        } else {
+          router.push("/");
+        }
+      } else {
+        setError("Invalid credentials. Please check your email and password.");
+      }
+    } catch {
+      setError("Login failed. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -68,7 +84,7 @@ export default function LoginPage() {
                   placeholder="you@example.com"
                 />
               </div>
-              
+
               <div>
                 <div className="flex justify-between items-center mb-2">
                   <label className="block text-sm font-medium text-gray-300">Password</label>
@@ -86,23 +102,23 @@ export default function LoginPage() {
 
               {error && <p className="text-red-400 text-sm bg-red-500/10 p-3 rounded">{error}</p>}
 
-              <Button type="submit" fullWidth className="mt-8">
-                Sign In to Dashboard
+              <Button type="submit" fullWidth className="mt-8" disabled={loading}>
+                {loading ? "Signing in..." : "Sign In to Dashboard"}
               </Button>
             </form>
 
             <div className="mt-8 text-center">
               <p className="text-gray-400 text-sm">
-                Don't have an account?{" "}
+                Don&apos;t have an account?{" "}
                 <Link href="/signup" className="text-white font-medium hover:text-gold-400 transition-colors">
                   Apply for Membership
                 </Link>
               </p>
             </div>
-            
-            {/* Hidden admin login link for testing */}
+
+            {/* Hidden admin login link */}
             <div className="mt-8 pt-6 border-t border-white/10 text-center">
-               <Link href="/admin/login" className="text-xs text-gray-600 hover:text-gray-400">Admin Portal</Link>
+              <Link href="/admin/login" className="text-xs text-gray-600 hover:text-gray-400">Admin Portal</Link>
             </div>
           </GlassCard>
         </div>

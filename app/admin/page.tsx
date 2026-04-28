@@ -1,15 +1,29 @@
 "use client";
 
 import React from "react";
-import { mockAdminStats, mockAdminVerifications } from "@/lib/mockData";
-import { Users, DollarSign, Heart, ShieldAlert, TrendingUp } from "lucide-react";
+import { useAppData } from "@/hooks/useAppData";
+import { Users, DollarSign, Heart, ShieldAlert, TrendingUp, Loader2 } from "lucide-react";
 
 export default function AdminDashboardHome() {
+  const { users, prizePools, charities, verifications, isLoading } = useAppData();
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="animate-spin text-gold-400" size={32} />
+      </div>
+    );
+  }
+
+  const activePrizePool = prizePools[0]?.total_amount || 0;
+  const totalCharityDisbursed = charities.reduce((sum, c) => sum + Number(c.total_raised), 0);
+  const pendingVerifications = verifications.filter(v => v.status === 'pending').length;
+
   const stats = [
-    { label: "Total Subscribers", value: mockAdminStats.totalSubscribers.toLocaleString(), icon: Users, color: "text-blue-400" },
-    { label: "Active Prize Pool", value: mockAdminStats.activePrizePool, icon: DollarSign, color: "text-gold-400" },
-    { label: "Charity Disbursed", value: mockAdminStats.charityTotals, icon: Heart, color: "text-emerald-400" },
-    { label: "Pending Verifications", value: mockAdminStats.pendingVerifications, icon: ShieldAlert, color: "text-amber-400" }
+    { label: "Total Subscribers", value: users.filter(u => u.role === 'subscriber').length.toLocaleString(), icon: Users, color: "text-blue-400" },
+    { label: "Active Prize Pool", value: `$${activePrizePool.toLocaleString()}`, icon: DollarSign, color: "text-gold-400" },
+    { label: "Charity Disbursed", value: `$${totalCharityDisbursed.toLocaleString()}`, icon: Heart, color: "text-emerald-400" },
+    { label: "Pending Verifications", value: pendingVerifications, icon: ShieldAlert, color: "text-amber-400" }
   ];
 
   return (
@@ -28,7 +42,7 @@ export default function AdminDashboardHome() {
                 {i === 0 && (
                   <span className="flex items-center space-x-1 text-emerald-400 text-xs font-bold bg-emerald-500/10 px-2 py-1 rounded">
                     <TrendingUp size={12} />
-                    <span>{mockAdminStats.monthlyGrowth}</span>
+                    <span>+12%</span>
                   </span>
                 )}
               </div>
@@ -41,7 +55,7 @@ export default function AdminDashboardHome() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* Mock Growth Chart */}
+        {/* Growth Chart Mock (Stateless for now) */}
         <div className="lg:col-span-2 bg-charcoal-900 border border-white/5 rounded-xl p-6">
           <div className="flex justify-between items-center mb-8">
             <h3 className="text-lg font-bold text-white">Platform Growth & Revenue</h3>
@@ -52,7 +66,6 @@ export default function AdminDashboardHome() {
           </div>
           
           <div className="h-64 flex items-end justify-between px-2 pb-6 border-b border-white/5 relative">
-            {/* Y axis mock */}
             <div className="absolute left-0 top-0 bottom-6 flex flex-col justify-between text-xs text-gray-600">
               <span>$2.5M</span>
               <span>$1.5M</span>
@@ -70,12 +83,7 @@ export default function AdminDashboardHome() {
             </div>
           </div>
           <div className="flex justify-between pl-12 pt-4 text-xs text-gray-500">
-            <span>Nov</span>
-            <span>Dec</span>
-            <span>Jan</span>
-            <span>Feb</span>
-            <span>Mar</span>
-            <span>Apr</span>
+            <span>Nov</span><span>Dec</span><span>Jan</span><span>Feb</span><span>Mar</span><span>Apr</span>
           </div>
         </div>
 
@@ -83,22 +91,28 @@ export default function AdminDashboardHome() {
         <div className="bg-charcoal-900 border border-white/5 rounded-xl p-6 flex flex-col">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-lg font-bold text-white">Action Required</h3>
-            <span className="bg-red-500/10 text-red-400 text-xs font-bold px-2 py-1 rounded">{mockAdminVerifications.length} Pending</span>
+            <span className="bg-red-500/10 text-red-400 text-xs font-bold px-2 py-1 rounded">{pendingVerifications} Pending</span>
           </div>
           
           <div className="flex-1 space-y-4 overflow-y-auto pr-2">
-            {mockAdminVerifications.map(v => (
-              <div key={v.id} className="bg-charcoal-950 p-4 rounded-lg border border-white/5">
-                <div className="flex justify-between mb-2">
-                  <p className="text-sm font-bold text-white">{v.userName}</p>
-                  <p className="text-sm font-bold text-gold-400">{v.amount}</p>
+            {verifications.filter(v => v.status === 'pending').map(v => {
+              const winnerUser = users.find(u => u.id === v.user_id);
+              return (
+                <div key={v.id} className="bg-charcoal-950 p-4 rounded-lg border border-white/5">
+                  <div className="flex justify-between mb-2">
+                    <p className="text-sm font-bold text-white">{winnerUser?.first_name || 'Unknown'} {winnerUser?.last_name || ''}</p>
+                    <p className="text-sm font-bold text-gold-400">Review</p>
+                  </div>
+                  <div className="flex justify-between items-end">
+                    <p className="text-xs text-gray-500">Verification Pending</p>
+                    <button className="text-xs font-medium text-white bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded transition-colors">Review</button>
+                  </div>
                 </div>
-                <div className="flex justify-between items-end">
-                  <p className="text-xs text-gray-500">{v.matchType}</p>
-                  <button className="text-xs font-medium text-white bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded transition-colors">Review</button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
+            {pendingVerifications === 0 && (
+              <p className="text-gray-500 text-sm text-center py-8">All clear! No pending items.</p>
+            )}
           </div>
         </div>
       </div>

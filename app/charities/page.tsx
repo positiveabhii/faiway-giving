@@ -5,15 +5,17 @@ import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Button } from "@/components/ui/Button";
-import { mockCharities } from "@/lib/mockData";
-import { Search, MapPin, Calendar, Heart } from "lucide-react";
+import { useAppData } from "@/hooks/useAppData";
+import { Search, Heart, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import type { Charity } from "@/types/database";
 
 export default function CharitiesPage() {
+  const { charities, isLoading } = useAppData();
   const [search, setSearch] = useState("");
-  const [selectedCharity, setSelectedCharity] = useState<typeof mockCharities[0] | null>(null);
+  const [selectedCharity, setSelectedCharity] = useState<Charity | null>(null);
 
-  const filteredCharities = mockCharities.filter(c => 
+  const filteredCharities = charities.filter(c => 
     c.name.toLowerCase().includes(search.toLowerCase()) || 
     c.tags.some(t => t.toLowerCase().includes(search.toLowerCase()))
   );
@@ -44,42 +46,48 @@ export default function CharitiesPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {filteredCharities.map((charity, i) => (
-              <GlassCard key={charity.id} animate delay={i * 0.1} className="p-0 overflow-hidden flex flex-col">
-                <div className="h-56 relative overflow-hidden group">
-                  <img src={charity.image} alt={charity.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-charcoal-950 to-transparent"></div>
-                  <div className="absolute bottom-4 left-4 flex space-x-2">
-                    {charity.tags.map(tag => (
-                      <span key={tag} className="bg-charcoal-900/80 backdrop-blur-md text-gold-400 text-xs font-medium px-3 py-1 rounded-full border border-white/5">
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-                <div className="p-6 flex-1 flex flex-col">
-                  <h3 className="text-2xl font-bold text-white mb-2">{charity.name}</h3>
-                  <p className="text-gray-400 text-sm mb-6 flex-1">{charity.mission}</p>
-                  
-                  <div className="grid grid-cols-2 gap-4 mb-6">
-                    <div className="bg-white/5 rounded-lg p-3 text-center">
-                      <p className="text-xs text-gray-500 uppercase">Raised</p>
-                      <p className="text-emerald-400 font-medium">{charity.stats.totalRaised}</p>
-                    </div>
-                    <div className="bg-white/5 rounded-lg p-3 text-center">
-                      <p className="text-xs text-gray-500 uppercase">Events</p>
-                      <p className="text-white font-medium">{charity.stats.upcomingEvents} Upcoming</p>
+          {isLoading ? (
+            <div className="flex items-center justify-center h-64">
+              <Loader2 className="animate-spin text-gold-400" size={32} />
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {filteredCharities.map((charity, i) => (
+                <GlassCard key={charity.id} animate delay={i * 0.1} className="p-0 overflow-hidden flex flex-col">
+                  <div className="h-56 relative overflow-hidden group">
+                    <img src={charity.image_url} alt={charity.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-charcoal-950 to-transparent"></div>
+                    <div className="absolute bottom-4 left-4 flex space-x-2">
+                      {charity.tags.map(tag => (
+                        <span key={tag} className="bg-charcoal-900/80 backdrop-blur-md text-gold-400 text-xs font-medium px-3 py-1 rounded-full border border-white/5">
+                          {tag}
+                        </span>
+                      ))}
                     </div>
                   </div>
-                  
-                  <Button variant="secondary" fullWidth onClick={() => setSelectedCharity(charity)}>
-                    View Details
-                  </Button>
-                </div>
-              </GlassCard>
-            ))}
-          </div>
+                  <div className="p-6 flex-1 flex flex-col">
+                    <h3 className="text-2xl font-bold text-white mb-2">{charity.name}</h3>
+                    <p className="text-gray-400 text-sm mb-6 flex-1">{charity.mission}</p>
+                    
+                    <div className="grid grid-cols-2 gap-4 mb-6">
+                      <div className="bg-white/5 rounded-lg p-3 text-center">
+                        <p className="text-xs text-gray-500 uppercase">Raised</p>
+                        <p className="text-emerald-400 font-medium">${charity.total_raised.toLocaleString()}</p>
+                      </div>
+                      <div className="bg-white/5 rounded-lg p-3 text-center">
+                        <p className="text-xs text-gray-500 uppercase">Events</p>
+                        <p className="text-white font-medium">{charity.upcoming_events} Upcoming</p>
+                      </div>
+                    </div>
+                    
+                    <Button variant="secondary" fullWidth onClick={() => setSelectedCharity(charity)}>
+                      View Details
+                    </Button>
+                  </div>
+                </GlassCard>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -103,7 +111,7 @@ export default function CharitiesPage() {
               className="bg-charcoal-900 border border-white/10 rounded-2xl w-full max-w-3xl overflow-hidden relative z-10 shadow-2xl"
             >
               <div className="h-64 relative">
-                <img src={selectedCharity.image} alt={selectedCharity.name} className="w-full h-full object-cover" />
+                <img src={selectedCharity.image_url} alt={selectedCharity.name} className="w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-t from-charcoal-900 to-transparent"></div>
                 <button
                   className="absolute top-4 right-4 w-10 h-10 bg-black/50 backdrop-blur-md rounded-full text-white flex items-center justify-center hover:bg-black/70 transition-colors"

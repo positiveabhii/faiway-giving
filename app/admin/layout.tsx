@@ -1,18 +1,38 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Ticket, Heart, ShieldCheck, BarChart3, LogOut, Menu } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { LayoutDashboard, Users, Ticket, Heart, ShieldCheck, BarChart3, LogOut, Menu, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { user, isLoading, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Auth Protection
+  useEffect(() => {
+    if (!isLoading && pathname !== "/admin/login") {
+      if (!user || user.role !== 'admin') {
+        router.push("/admin/login");
+      }
+    }
+  }, [user, isLoading, pathname, router]);
 
   // Skip layout wrapper for login page
   if (pathname === "/admin/login") {
     return <>{children}</>;
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-charcoal-900 flex items-center justify-center">
+        <Loader2 className="animate-spin text-gold-400" size={48} />
+      </div>
+    );
   }
 
   const navItems = [
@@ -23,6 +43,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { name: "Verifications", href: "/admin/verifications", icon: ShieldCheck },
     { name: "Reports", href: "/admin/reports", icon: BarChart3 },
   ];
+
+  const handleLogout = async () => {
+    await logout();
+    router.push("/admin/login");
+  };
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full bg-charcoal-950 border-r border-white/5 w-64">
@@ -52,10 +77,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </nav>
 
       <div className="p-4 border-t border-white/5">
-        <Link href="/admin/login" className="flex items-center space-x-3 px-4 py-3 rounded-lg text-gray-400 hover:bg-red-500/10 hover:text-red-400 transition-colors">
+        <button 
+          onClick={handleLogout}
+          className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-gray-400 hover:bg-red-500/10 hover:text-red-400 transition-colors"
+        >
           <LogOut size={18} />
           <span>Exit Admin</span>
-        </Link>
+        </button>
       </div>
     </div>
   );
@@ -84,6 +112,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <div className="flex items-center space-x-2 text-gray-400 bg-charcoal-900 px-3 py-1.5 rounded-full border border-white/5">
               <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
               <span className="text-xs font-medium">System Nominal</span>
+            </div>
+            <div className="w-8 h-8 rounded-full bg-charcoal-800 flex items-center justify-center text-gold-400 font-bold text-xs">
+              {user?.first_name.charAt(0)}
             </div>
           </div>
         </header>

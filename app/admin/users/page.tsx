@@ -1,14 +1,18 @@
 "use client";
 
 import React, { useState } from "react";
-import { mockAdminUsers } from "@/lib/mockData";
-import { Search, MoreVertical, Edit, Ban, FileText } from "lucide-react";
+import { useAppData } from "@/hooks/useAppData";
+import { Search, Edit, Ban, FileText, Loader2 } from "lucide-react";
 
 export default function AdminUsersPage() {
+  const { users, subscriptions, isLoading } = useAppData();
   const [search, setSearch] = useState("");
 
-  const filteredUsers = mockAdminUsers.filter(u => 
-    u.name.toLowerCase().includes(search.toLowerCase()) || 
+  if (isLoading) return <div className="flex items-center justify-center h-64"><Loader2 className="animate-spin text-gold-400" size={32} /></div>;
+
+  const filteredUsers = users.filter(u => 
+    u.first_name.toLowerCase().includes(search.toLowerCase()) || 
+    u.last_name.toLowerCase().includes(search.toLowerCase()) ||
     u.email.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -43,40 +47,43 @@ export default function AdminUsersPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
-              {filteredUsers.map((user) => (
-                <tr key={user.id} className="hover:bg-white/5 transition-colors">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 rounded-full bg-charcoal-800 flex items-center justify-center text-gray-400 font-bold text-xs">
-                        {user.name.charAt(0)}
+              {filteredUsers.map((user) => {
+                const sub = subscriptions.find(s => s.user_id === user.id);
+                return (
+                  <tr key={user.id} className="hover:bg-white/5 transition-colors">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 rounded-full bg-charcoal-800 flex items-center justify-center text-gray-400 font-bold text-xs overflow-hidden">
+                          {user.avatar_url ? <img src={user.avatar_url} className="w-full h-full object-cover" /> : user.first_name.charAt(0)}
+                        </div>
+                        <div>
+                          <p className="text-white font-medium">{user.first_name} {user.last_name}</p>
+                          <p className="text-gray-500 text-xs">{user.email}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-white font-medium">{user.name}</p>
-                        <p className="text-gray-500 text-xs">{user.email}</p>
+                    </td>
+                    <td className="px-6 py-4 text-gray-300 capitalize">{sub?.plan || 'None'}</td>
+                    <td className="px-6 py-4">
+                      <span className={`px-2 py-1 text-xs font-bold rounded capitalize ${user.status === 'active' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
+                        {user.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex justify-end space-x-2">
+                        <button className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors" title="Inspect Scores">
+                          <FileText size={16} />
+                        </button>
+                        <button className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors" title="Edit Profile">
+                          <Edit size={16} />
+                        </button>
+                        <button className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors" title="Suspend User">
+                          <Ban size={16} />
+                        </button>
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-gray-300">{user.plan}</td>
-                  <td className="px-6 py-4">
-                    <span className={`px-2 py-1 text-xs font-bold rounded ${user.status === 'Active' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
-                      {user.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex justify-end space-x-2">
-                      <button className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors" title="Inspect Scores">
-                        <FileText size={16} />
-                      </button>
-                      <button className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors" title="Edit Profile">
-                        <Edit size={16} />
-                      </button>
-                      <button className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors" title="Suspend User">
-                        <Ban size={16} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                  </tr>
+                );
+              })}
               {filteredUsers.length === 0 && (
                 <tr>
                   <td colSpan={4} className="px-6 py-12 text-center text-gray-500">
