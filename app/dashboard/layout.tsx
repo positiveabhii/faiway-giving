@@ -1,18 +1,37 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { LayoutDashboard, Edit3, Ticket, Trophy, Heart, Settings, LogOut, Menu, X, Bell } from "lucide-react";
-import { mockUser, mockNotifications } from "@/lib/mockData";
+import { useAuth } from "@/hooks/useAuth";
+import { useAppData } from "@/hooks/useAppData";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
 
-  const unreadCount = mockNotifications.filter(n => !n.read).length;
+  const { user, logout } = useAuth();
+  const { notifications, subscriptions, draws } = useAppData();
+
+
+  useEffect(() => {
+    if (!user) {
+      // console.log(user)
+      router.push("/login")
+    }
+  }, [user, router]);
+
+  if (!user) return null;
+
+  const userNotifications = notifications.filter(n => n.user_id === user.id);
+  const unreadCount = userNotifications.filter(n => !n.is_read).length;
+
+  const userSub = subscriptions.find(s => s.user_id === user.id);
+  const upcomingDraw = draws.find(d => d.status === "upcoming");
 
   const navItems = [
     { name: "Overview", href: "/dashboard", icon: LayoutDashboard },
@@ -32,12 +51,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </span>
         </Link>
       </div>
-      
+
       <div className="px-6 py-4 border-b border-white/5 flex items-center space-x-3 mb-4">
-        <img src={mockUser.avatar} alt={mockUser.name} className="w-10 h-10 rounded-full object-cover border border-gold-500/30" />
+        <img src={user.avatar_url || "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&q=80"} alt={user.first_name} className="w-10 h-10 rounded-full object-cover border border-gold-500/30" />
         <div>
-          <p className="text-white text-sm font-bold">{mockUser.name}</p>
-          <p className="text-gold-400 text-xs">{mockUser.subscription.plan}</p>
+          <p className="text-white text-sm font-bold">{user.first_name} {user.last_name}</p>
+          <p className="text-gold-400 text-xs capitalize">{userSub?.plan || 'No Plan'}</p>
         </div>
       </div>
 
@@ -60,10 +79,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </nav>
 
       <div className="p-4 border-t border-white/5">
-        <Link href="/login" className="flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-400 hover:bg-red-500/10 hover:text-red-400 transition-colors">
+        <button onClick={logout} className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-400 hover:bg-red-500/10 hover:text-red-400 transition-colors">
           <LogOut size={18} />
           <span>Sign Out</span>
-        </Link>
+        </button>
       </div>
     </div>
   );
@@ -91,10 +110,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div className="flex items-center space-x-6 relative">
             <div className="text-right hidden sm:block">
               <p className="text-xs text-gray-400">Current Jackpot</p>
-              <p className="text-gold-400 font-bold">$2,500,000</p>
+              <p className="text-gold-400 font-bold">${upcomingDraw?.total_jackpot.toLocaleString() || '0'}</p>
             </div>
-            
-            <button 
+
+            <button
               className="relative p-2 text-gray-400 hover:text-white transition-colors"
               onClick={() => setShowNotifications(!showNotifications)}
             >
@@ -118,11 +137,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     <span className="text-xs text-gold-400">{unreadCount} new</span>
                   </div>
                   <div className="max-h-80 overflow-y-auto">
-                    {mockNotifications.map(notif => (
-                      <div key={notif.id} className={`p-4 border-b border-white/5 ${!notif.read ? 'bg-gold-500/5' : ''}`}>
+                    {userNotifications.map(notif => (
+                      <div key={notif.id} className={`p-4 border-b border-white/5 ${!notif.is_read ? 'bg-gold-500/5' : ''}`}>
                         <div className="flex justify-between items-start mb-1">
-                          <h4 className={`text-sm font-medium ${!notif.read ? 'text-gold-400' : 'text-gray-300'}`}>{notif.title}</h4>
-                          <span className="text-xs text-gray-500">{notif.date}</span>
+                          <h4 className={`text-sm font-medium ${!notif.is_read ? 'text-gold-400' : 'text-gray-300'}`}>{notif.title}</h4>
+                          <span className="text-xs text-gray-500">{new Date(notif.created_at).toLocaleDateString()}</span>
                         </div>
                         <p className="text-xs text-gray-400">{notif.message}</p>
                       </div>

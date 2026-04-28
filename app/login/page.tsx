@@ -4,17 +4,24 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Button } from "@/components/ui/Button";
-import { motion } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const { login } = useAuth();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    // In a real app, this would auth and redirect. Here we just redirect to dashboard.
-    window.location.href = "/dashboard";
+    setError("");
+    const success = await login(email, false);
+    if (success) {
+      window.location.href = "/dashboard";
+    } else {
+      setError("Invalid credentials. Try alexander.s@example.com for mock user.");
+    }
   };
 
   return (
@@ -76,6 +83,8 @@ export default function LoginPage() {
                   placeholder="••••••••"
                 />
               </div>
+
+              {error && <p className="text-red-400 text-sm bg-red-500/10 p-3 rounded">{error}</p>}
 
               <Button type="submit" fullWidth className="mt-8">
                 Sign In to Dashboard

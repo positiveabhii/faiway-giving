@@ -4,19 +4,32 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Button } from "@/components/ui/Button";
-import { mockCharities } from "@/lib/mockData";
 import { ArrowLeft, Check, ChevronRight } from "lucide-react";
+import { useAppData } from "@/hooks/useAppData";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function SignupPage() {
   const [step, setStep] = useState(1);
   const [plan, setPlan] = useState("monthly");
   const [charityId, setCharityId] = useState("");
   const [contribution, setContribution] = useState("10");
+  
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  
+  const { charities } = useAppData();
+  const { signup } = useAuth();
 
-  const handleNext = (e: React.FormEvent) => {
+  const handleNext = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (step < 3) setStep(step + 1);
-    else window.location.href = "/dashboard";
+    if (step < 3) {
+      setStep(step + 1);
+    } else {
+      await signup({ email, first_name: firstName, last_name: lastName });
+      // In a real app we'd also create subscription and charity preference here
+      window.location.href = "/dashboard";
+    }
   };
 
   return (
@@ -119,13 +132,13 @@ export default function SignupPage() {
                   </div>
 
                   <div className="space-y-4 max-h-64 overflow-y-auto pr-2 hide-scrollbar">
-                    {mockCharities.map(charity => (
+                    {charities.map(charity => (
                       <div 
                         key={charity.id}
                         onClick={() => setCharityId(charity.id)}
                         className={`cursor-pointer p-4 rounded-xl border transition-all duration-300 flex items-center space-x-4 ${charityId === charity.id ? 'border-emerald-500 bg-emerald-500/10' : 'border-white/10 bg-charcoal-900/50 hover:border-white/30'}`}
                       >
-                        <img src={charity.image} alt={charity.name} className="w-16 h-16 rounded-lg object-cover" />
+                        <img src={charity.image_url} alt={charity.name} className="w-16 h-16 rounded-lg object-cover" />
                         <div className="flex-1">
                           <h4 className="text-white font-bold">{charity.name}</h4>
                           <p className="text-gray-400 text-xs line-clamp-1">{charity.mission}</p>
@@ -163,17 +176,17 @@ export default function SignupPage() {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-300 mb-2">First Name</label>
-                      <input type="text" required className="w-full bg-charcoal-900/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-gold-500/50" />
+                      <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} required className="w-full bg-charcoal-900/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-gold-500/50" />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-300 mb-2">Last Name</label>
-                      <input type="text" required className="w-full bg-charcoal-900/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-gold-500/50" />
+                      <input type="text" value={lastName} onChange={e => setLastName(e.target.value)} required className="w-full bg-charcoal-900/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-gold-500/50" />
                     </div>
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2">Email Address</label>
-                    <input type="email" required className="w-full bg-charcoal-900/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-gold-500/50" />
+                    <input type="email" value={email} onChange={e => setEmail(e.target.value)} required className="w-full bg-charcoal-900/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-gold-500/50" />
                   </div>
 
                   <div>
