@@ -3,34 +3,39 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, Edit3, Ticket, Trophy, Heart, Settings, LogOut, Menu, X, Bell } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
-import { useAppData } from "@/hooks/useAppData";
+import { LayoutDashboard, Edit3, Ticket, Trophy, Heart, Settings, LogOut, Menu, Bell, Loader2 } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import { useAppData } from "@/context/AppDataContext";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { session, user, initialized, logout } = useAuth();
+  const { notifications, subscriptions, draws } = useAppData();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
 
-  const { user, logout } = useAuth();
-  const { notifications, subscriptions, draws } = useAppData();
-
-
   useEffect(() => {
-    if (!user) {
-      // console.log(user)
-      router.push("/login")
+    if (initialized && !session) {
+      router.replace("/login");
     }
-  }, [user, router]);
+  }, [initialized, session, router]);
 
-  if (!user) return null;
+  if (!initialized) {
+    return (
+      <div className="min-h-screen bg-charcoal-950 flex flex-col items-center justify-center space-y-4">
+        <Loader2 className="animate-spin text-gold-400" size={40} />
+        <p className="text-gray-500 text-xs uppercase tracking-widest animate-pulse font-heading font-bold">Restoring Member Session</p>
+      </div>
+    );
+  }
 
-  const userNotifications = notifications.filter(n => n.user_id === user.id);
+  if (!session) return null;
+
+  const userNotifications = notifications.filter(n => n.user_id === session.user.id);
   const unreadCount = userNotifications.filter(n => !n.is_read).length;
-
-  const userSub = subscriptions.find(s => s.user_id === user.id);
+  const userSub = subscriptions.find(s => s.user_id === session.user.id);
   const upcomingDraw = draws.find(d => d.status === "upcoming");
 
   const navItems = [
@@ -53,10 +58,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </div>
 
       <div className="px-6 py-4 border-b border-white/5 flex items-center space-x-3 mb-4">
-        <img src={user.avatar_url || "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&q=80"} alt={user.first_name} className="w-10 h-10 rounded-full object-cover border border-gold-500/30" />
+        <img src={user?.avatar_url || "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&q=80"} alt={user?.first_name} className="w-10 h-10 rounded-full object-cover border border-gold-500/30" />
         <div>
-          <p className="text-white text-sm font-bold">{user.first_name} {user.last_name}</p>
-          <p className="text-gold-400 text-xs capitalize">{userSub?.plan || 'No Plan'}</p>
+          <p className="text-white text-sm font-bold">{user?.first_name} {user?.last_name}</p>
+          <p className="text-gold-400 text-xs capitalize">{userSub?.plan || 'Member'}</p>
         </div>
       </div>
 
@@ -89,14 +94,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="min-h-screen bg-charcoal-950 flex selection:bg-gold-500/30">
-      {/* Desktop Sidebar */}
       <div className="hidden md:block fixed inset-y-0 left-0 z-40">
         <SidebarContent />
       </div>
 
-      {/* Main Content */}
       <div className="flex-1 md:pl-64 flex flex-col min-h-screen">
-        {/* Topbar */}
         <header className="sticky top-0 z-30 bg-charcoal-950/80 backdrop-blur-md border-b border-white/5 px-6 py-4 flex justify-between items-center">
           <div className="flex items-center">
             <button className="md:hidden mr-4 text-white" onClick={() => setMobileMenuOpen(true)}>
@@ -123,7 +125,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               )}
             </button>
 
-            {/* Notifications Dropdown */}
             <AnimatePresence>
               {showNotifications && (
                 <motion.div
@@ -153,13 +154,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
         </header>
 
-        {/* Page Content */}
         <main className="flex-1 p-6 sm:p-8">
           {children}
         </main>
       </div>
 
-      {/* Mobile Sidebar Overlay */}
       <AnimatePresence>
         {mobileMenuOpen && (
           <>

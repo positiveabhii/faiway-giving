@@ -22,7 +22,8 @@ export async function signupSyncUserProfile(
   metadata: { first_name: string; last_name: string; plan?: 'monthly' | 'yearly'; charity_id?: string; contribution_percentage?: number },
   role: 'subscriber' | 'admin' = 'subscriber'
 ): Promise<SyncResult> {
-  console.group(`[AuthSync] Synchronizing user: ${userId}`);
+  console.group(`[AuthSync] FULL SYNC: ${userId}`);
+  console.time("full_sync_duration");
   
   try {
     // 1. Ensure Profile exists
@@ -45,11 +46,11 @@ export async function signupSyncUserProfile(
         .single();
         
       if (error) {
-        console.error('[AuthSync] Profile creation failed:', error);
-        throw new Error(`Critical: Profile synchronization failed - ${error.message}`);
+        console.error('[AuthSync] Profile creation SQL error:', error);
+        throw new Error(`Critical: Profile synchronization failed - ${error.message} (Code: ${error.code})`);
       }
       profile = data;
-      console.log('[AuthSync] Profile created successfully');
+      console.log('[AuthSync] Profile created successfully:', profile);
     } else {
       console.log('[AuthSync] Profile already exists');
     }
@@ -90,12 +91,54 @@ export async function signupSyncUserProfile(
       }
     }
 
-    console.log('[AuthSync] Synchronization complete');
+    console.log('[AuthSync] Full synchronization complete');
     return { profile, subscription, charitySelection };
   } catch (error) {
-    console.error('[AuthSync] Fatal synchronization error:', error);
+    console.error('[AuthSync] FATAL synchronization error:', error);
     throw error;
   } finally {
+    console.timeEnd("full_sync_duration");
+    console.groupEnd();
+  }
+}
+
+/**
+ * Lightweight repair function to create a minimal profile if it's missing during login.
+ * This avoids the overhead of checking subscriptions/charities during a standard login flow.
+ */
+export async function repairMissingProfile(
+  userId: string,
+  email: string,
+  metadata: { first_name: string; last_name: string },
+  role: 'subscriber' | 'admin' = 'subscriber'
+): Promise<Profile> {
+  console.group(`[AuthSync] REPAIR: ${userId}`);
+  console.time("repair_duration");
+  
+  try {
+    console.log('[AuthSync] Attempting minimal profile creation...');
+    const { data, error } = await sb()
+      .from('profiles')
+      .insert({
+        id: userId,
+        email,
+        first_name: metadata.first_name || 'User',
+        last_name: metadata.last_name || '',
+        role,
+        status: 'active'
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('[AuthSync] Repair SQL error:', error);
+      throw new Error(`Profile repair failed: ${error.message}`);
+    }
+
+    console.log('[AuthSync] Profile repaired successfully:', data);
+    return data;
+  } finally {
+    console.timeEnd("repair_duration");
     console.groupEnd();
   }
 }

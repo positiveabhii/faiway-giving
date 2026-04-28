@@ -7,12 +7,33 @@ import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import { useAppData } from "@/hooks/useAppData";
 
+function DashboardSkeleton() {
+  return (
+    <div className="space-y-8 animate-pulse">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="col-span-1 lg:col-span-2 h-64 bg-charcoal-900 rounded-2xl border border-white/5"></div>
+        <div className="h-64 bg-charcoal-900 rounded-2xl border border-white/5"></div>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="h-48 bg-charcoal-900 rounded-2xl border border-white/5"></div>
+        <div className="h-48 bg-charcoal-900 rounded-2xl border border-white/5"></div>
+      </div>
+    </div>
+  );
+}
+
 export default function DashboardHome() {
   const { user } = useAuth();
   const { draws, subscriptions, winnings, charities, userCharitySelections, scores, isLoading } = useAppData();
 
-  if (isLoading || !user) {
-    return <div className="flex items-center justify-center h-64"><Loader2 className="animate-spin text-gold-400" size={32} /></div>;
+  // Root authentication check - this is the only hard block
+  if (!user) {
+    return <div className="flex items-center justify-center h-screen"><Loader2 className="animate-spin text-gold-400" size={32} /></div>;
+  }
+
+  // If bootstrap is still happening, show skeleton
+  if (isLoading) {
+    return <DashboardSkeleton />;
   }
 
   const upcomingDraw = draws.find(d => d.status === "upcoming");
@@ -25,11 +46,12 @@ export default function DashboardHome() {
   return (
     <div className="space-y-8">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <GlassCard className="col-span-1 lg:col-span-2 p-8 border-gold-500/20 relative overflow-hidden flex flex-col justify-center">
+        <GlassCard className="col-span-1 lg:col-span-2 p-8 border-gold-500/20 relative overflow-hidden flex flex-col justify-center min-h-[250px]">
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,_var(--tw-gradient-stops))] from-gold-500/10 via-transparent to-transparent"></div>
           <div className="relative z-10">
             <h2 className="text-3xl font-heading font-bold text-white mb-2">Welcome back, {user.first_name}</h2>
             <p className="text-gray-400 mb-8 max-w-md">Your 5 best scores this month are currently securing your place in the upcoming multi-million dollar draw.</p>
+
             <div className="flex space-x-6">
               <div>
                 <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Total Entries</p>
@@ -44,8 +66,8 @@ export default function DashboardHome() {
           </div>
         </GlassCard>
 
-        {upcomingDraw && (
-          <GlassCard className="p-8 border-white/5 flex flex-col justify-between items-center text-center">
+        <GlassCard className="p-8 border-white/5 flex flex-col justify-between items-center text-center">
+          {upcomingDraw ? (
             <div>
               <p className="text-gold-400 uppercase tracking-widest text-xs font-bold mb-2">Next Draw</p>
               <h3 className="text-3xl font-bold text-white mb-2">${upcomingDraw.total_jackpot.toLocaleString()}</h3>
@@ -54,13 +76,15 @@ export default function DashboardHome() {
                 <span>{upcomingDraw.countdown_end ? new Date(upcomingDraw.countdown_end).toLocaleDateString() : "TBD"}</span>
               </p>
             </div>
-            <Link href="/dashboard/scores" className="w-full">
-              <button className="w-full bg-charcoal-800 hover:bg-charcoal-700 text-white py-3 rounded-xl transition-colors text-sm font-medium border border-white/10 flex justify-center items-center space-x-2">
-                <Edit3 size={16} /><span>Enter New Score</span>
-              </button>
-            </Link>
-          </GlassCard>
-        )}
+          ) : (
+            <div className="text-gray-500 italic">No upcoming draws</div>
+          )}
+          <Link href="/dashboard/scores" className="w-full mt-auto">
+            <button className="w-full bg-charcoal-800 hover:bg-charcoal-700 text-white py-3 rounded-xl transition-colors text-sm font-medium border border-white/10 flex justify-center items-center space-x-2">
+              <Edit3 size={16} /><span>Enter New Score</span>
+            </button>
+          </Link>
+        </GlassCard>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -73,17 +97,20 @@ export default function DashboardHome() {
               <span>Manage</span><ArrowRight size={14} />
             </Link>
           </div>
-          <div className="bg-charcoal-900/50 rounded-xl p-4 border border-white/5 mb-4 flex justify-between items-center">
-            <div>
-              <p className="text-xs text-gray-500 mb-1">Current Plan</p>
-              <p className="text-white font-medium capitalize">{userSub?.plan ?? "No Plan"} {userSub?.plan === "yearly" ? "Yearly" : ""}</p>
+
+          <>
+            <div className="bg-charcoal-900/50 rounded-xl p-4 border border-white/5 mb-4 flex justify-between items-center">
+              <div>
+                <p className="text-xs text-gray-500 mb-1">Current Plan</p>
+                <p className="text-white font-medium capitalize">{userSub?.plan ?? "No Plan"} {userSub?.plan === "yearly" ? "Yearly" : ""}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-gray-500 mb-1">Status</p>
+                <p className="text-emerald-400 font-medium text-sm px-2 py-0.5 bg-emerald-500/10 rounded-full inline-block capitalize">{userSub?.status ?? "N/A"}</p>
+              </div>
             </div>
-            <div className="text-right">
-              <p className="text-xs text-gray-500 mb-1">Status</p>
-              <p className="text-emerald-400 font-medium text-sm px-2 py-0.5 bg-emerald-500/10 rounded-full inline-block capitalize">{userSub?.status ?? "N/A"}</p>
-            </div>
-          </div>
-          <p className="text-sm text-gray-400">Renews on {userSub ? new Date(userSub.next_renewal_date).toLocaleDateString() : "—"}</p>
+            <p className="text-sm text-gray-400">Renews on {userSub ? new Date(userSub.next_renewal_date).toLocaleDateString() : "—"}</p>
+          </>
         </GlassCard>
 
         <GlassCard className="p-6 border-white/5">
@@ -95,6 +122,7 @@ export default function DashboardHome() {
               <span>View</span><ArrowRight size={14} />
             </Link>
           </div>
+
           {selectedCharity ? (
             <>
               <div className="flex items-center space-x-4 mb-6">

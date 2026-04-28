@@ -1,18 +1,44 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { SplashIntro } from "@/components/ui/SplashIntro";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/Button";
-import { GlassCard } from "@/components/ui/GlassCard";
 import { motion } from "framer-motion";
-import { Trophy, Heart, Calendar, ArrowRight, Star, ChevronDown } from "lucide-react";
+import { Trophy, Heart, Calendar, ArrowRight, Star, ChevronDown, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { mockCharities } from "@/lib/mockData";
+import { useAuth } from "@/context/AuthContext";
+import { useRouter } from "next/navigation";
 
 export default function LandingPage() {
+  const { session, initialized, user } = useAuth();
+  const router = useRouter();
   const [introComplete, setIntroComplete] = useState(false);
+
+  useEffect(() => {
+    if (initialized && session) {
+      router.replace(user?.role === 'admin' ? '/admin' : '/dashboard');
+    }
+  }, [initialized, session, user, router]);
+
+  if (!initialized) {
+    return (
+      <div className="min-h-screen bg-charcoal-950 flex flex-col items-center justify-center space-y-4">
+        <Loader2 className="animate-spin text-gold-400" size={40} />
+        <p className="text-gray-500 text-xs uppercase tracking-widest animate-pulse">Initializing Fairway Giving</p>
+      </div>
+    );
+  }
+
+  // If session exists, we are redirecting, so show loader
+  if (session) {
+    return (
+      <div className="min-h-screen bg-charcoal-950 flex flex-col items-center justify-center">
+        <Loader2 className="animate-spin text-gold-400" size={40} />
+      </div>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-charcoal-950 flex flex-col selection:bg-gold-500/30">
@@ -72,178 +98,24 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* HOW IT WORKS */}
-        <section className="py-24 bg-charcoal-900 relative">
-          <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
-          <div className="max-w-7xl mx-auto px-6">
-            <div className="text-center mb-16">
-              <h2 className="text-3xl md:text-4xl font-heading font-bold text-white mb-4">The Ecosystem</h2>
-              <p className="text-gray-400 max-w-2xl mx-auto">A seamless blend of performance, reward, and philanthropy.</p>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <GlassCard animate delay={0.2} className="text-center group">
-                <div className="w-16 h-16 rounded-full bg-gold-500/10 flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-500">
-                  <Calendar className="text-gold-400" size={32} />
-                </div>
-                <h3 className="text-xl font-medium text-white mb-3">1. Subscribe & Play</h3>
-                <p className="text-gray-400 leading-relaxed">Join the club, play your regular rounds, and enter your scores into our premium dashboard.</p>
-              </GlassCard>
-
-              <GlassCard animate delay={0.4} className="text-center group">
-                <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-500">
-                  <Heart className="text-emerald-400" size={32} />
-                </div>
-                <h3 className="text-xl font-medium text-white mb-3">2. Make an Impact</h3>
-                <p className="text-gray-400 leading-relaxed">A portion of every entry pool is instantly dedicated to a vetted charity of your choice.</p>
-              </GlassCard>
-
-              <GlassCard animate delay={0.6} className="text-center group">
-                <div className="w-16 h-16 rounded-full bg-gold-500/10 flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-500">
-                  <Trophy className="text-gold-400" size={32} />
-                </div>
-                <h3 className="text-xl font-medium text-white mb-3">3. Win the Draw</h3>
-                <p className="text-gray-400 leading-relaxed">Your scores become your lucky numbers in our monthly multi-million dollar prize draws.</p>
-              </GlassCard>
-            </div>
-          </div>
-        </section>
-
-        {/* PRIZE EXPLANATION */}
-        <section className="py-24 bg-charcoal-950 relative overflow-hidden">
-          <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center">
-            <div className="w-full md:w-1/2 pr-0 md:pr-12 mb-12 md:mb-0">
-              <motion.div initial={{ opacity: 0, x: -50 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.8 }}>
-                <h2 className="text-4xl font-heading font-bold text-white mb-6">Unprecedented Rewards.</h2>
-                <p className="text-gray-400 text-lg mb-8 leading-relaxed">
-                  Your 5 best scores each month generate your draw ticket. Match all 5 numbers to win the grand jackpot. Match 4 or 3 numbers for secondary premium payouts.
-                </p>
-                <div className="space-y-6">
-                  <div className="flex items-center space-x-4 bg-charcoal-900/50 p-4 rounded-xl border border-white/5">
-                    <div className="w-12 h-12 rounded-full bg-gold-500/20 flex items-center justify-center flex-shrink-0">
-                      <span className="text-gold-400 font-bold">5</span>
-                    </div>
-                    <div>
-                      <h4 className="text-white font-medium text-lg">Jackpot Match</h4>
-                      <p className="text-gray-400 text-sm">Estimated $2.5M+ payout</p>
-                    </div>
+        {/* STATS STRIP */}
+        <section className="border-y border-white/5 bg-white/[0.02] backdrop-blur-sm relative z-10">
+          <div className="max-w-7xl mx-auto px-6 py-12">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-4">
+              {[
+                { label: "Total Jackpot", value: "$4.2M+", icon: Trophy },
+                { label: "Members", value: "12,000+", icon: Star },
+                { label: "Donated", value: "$850k+", icon: Heart },
+                { label: "Next Draw", value: "Sat 8pm", icon: Calendar }
+              ].map((stat, i) => (
+                <div key={i} className="text-center group">
+                  <div className="flex justify-center mb-3">
+                    <stat.icon className="text-gold-500 group-hover:scale-110 transition-transform duration-300" size={24} />
                   </div>
-                  <div className="flex items-center space-x-4 bg-charcoal-900/50 p-4 rounded-xl border border-white/5">
-                    <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0">
-                      <span className="text-white font-bold">4</span>
-                    </div>
-                    <div>
-                      <h4 className="text-white font-medium text-lg">Secondary Match</h4>
-                      <p className="text-gray-400 text-sm">Estimated $50,000 payout</p>
-                    </div>
-                  </div>
+                  <p className="text-2xl md:text-3xl font-heading font-bold text-white mb-1 tracking-tight">{stat.value}</p>
+                  <p className="text-xs text-gray-500 uppercase tracking-widest font-medium">{stat.label}</p>
                 </div>
-              </motion.div>
-            </div>
-            <div className="w-full md:w-1/2 relative">
-              <GlassCard className="relative z-10 aspect-square flex flex-col items-center justify-center text-center p-8 border-gold-500/20 glow-gold">
-                <p className="text-gold-400 font-medium uppercase tracking-widest mb-2">Current Estimated Jackpot</p>
-                <h3 className="text-6xl md:text-7xl font-bold text-white mb-4">$2,500,000</h3>
-                <p className="text-gray-400 mb-8">Drawing in 4 Days 12 Hours</p>
-                <Button size="lg" className="w-full sm:w-auto">Enter Your Scores</Button>
-              </GlassCard>
-            </div>
-          </div>
-        </section>
-
-        {/* CHARITY IMPACT */}
-        <section className="py-24 bg-charcoal-900">
-          <div className="max-w-7xl mx-auto px-6">
-            <div className="flex flex-col md:flex-row justify-between items-end mb-12">
-              <div className="max-w-2xl">
-                <h2 className="text-4xl font-heading font-bold text-white mb-4">Elevate Your Impact</h2>
-                <p className="text-gray-400 text-lg">We partner with leading global charities. You decide where your contribution goes.</p>
-              </div>
-              <Link href="/charities" className="mt-6 md:mt-0 text-gold-400 hover:text-gold-300 font-medium flex items-center space-x-2">
-                <span>View Directory</span>
-                <ArrowRight size={18} />
-              </Link>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {mockCharities.map((charity, index) => (
-                <GlassCard key={charity.id} animate delay={0.2 * index} className="p-0 overflow-hidden flex flex-col">
-                  <div className="h-48 relative overflow-hidden">
-                    <img src={charity.image} alt={charity.name} className="w-full h-full object-cover transition-transform duration-700 hover:scale-110" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-charcoal-950 to-transparent"></div>
-                  </div>
-                  <div className="p-6 flex-1 flex flex-col">
-                    <h3 className="text-xl font-bold text-white mb-2">{charity.name}</h3>
-                    <p className="text-gray-400 text-sm mb-6 flex-1">{charity.mission}</p>
-                    <div className="flex justify-between items-center pt-4 border-t border-white/10">
-                      <div>
-                        <p className="text-xs text-gray-500 uppercase tracking-wider">Raised</p>
-                        <p className="text-emerald-400 font-medium">{charity.stats.totalRaised}</p>
-                      </div>
-                      <Button variant="outline" size="sm">Select</Button>
-                    </div>
-                  </div>
-                </GlassCard>
               ))}
-            </div>
-          </div>
-        </section>
-
-        {/* PRICING */}
-        <section className="py-24 bg-charcoal-950 text-center">
-          <div className="max-w-4xl mx-auto px-6">
-            <h2 className="text-4xl font-heading font-bold text-white mb-4">Exclusive Access</h2>
-            <p className="text-gray-400 text-lg mb-12">Choose the membership that suits your ambition.</p>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-3xl mx-auto">
-              <GlassCard animate delay={0.2} className="text-left p-8 border-white/5">
-                <h3 className="text-2xl font-bold text-white mb-2">Monthly</h3>
-                <div className="flex items-baseline space-x-2 mb-6">
-                  <span className="text-5xl font-bold text-white">$49</span>
-                  <span className="text-gray-400">/mo</span>
-                </div>
-                <ul className="space-y-4 mb-8">
-                  <li className="flex items-center space-x-3 text-gray-300">
-                    <Star size={18} className="text-gold-500" />
-                    <span>Monthly Draw Entry</span>
-                  </li>
-                  <li className="flex items-center space-x-3 text-gray-300">
-                    <Star size={18} className="text-gold-500" />
-                    <span>Charity Selection</span>
-                  </li>
-                  <li className="flex items-center space-x-3 text-gray-300">
-                    <Star size={18} className="text-gold-500" />
-                    <span>Basic Dashboard</span>
-                  </li>
-                </ul>
-                <Button fullWidth variant="secondary">Subscribe Monthly</Button>
-              </GlassCard>
-
-              <GlassCard animate delay={0.4} className="text-left p-8 border-gold-500/30 relative glow-gold overflow-hidden">
-                <div className="absolute top-4 right-4 bg-gold-500/20 text-gold-400 text-xs font-bold uppercase tracking-wider py-1 px-3 rounded-full">
-                  Premium
-                </div>
-                <h3 className="text-2xl font-bold text-white mb-2">Annually</h3>
-                <div className="flex items-baseline space-x-2 mb-6">
-                  <span className="text-5xl font-bold text-white">$490</span>
-                  <span className="text-gray-400">/yr</span>
-                </div>
-                <ul className="space-y-4 mb-8">
-                  <li className="flex items-center space-x-3 text-gray-300">
-                    <Star size={18} className="text-gold-500" />
-                    <span>Monthly Draw Entry (12x)</span>
-                  </li>
-                  <li className="flex items-center space-x-3 text-gray-300">
-                    <Star size={18} className="text-gold-500" />
-                    <span>Multiplier Bonuses</span>
-                  </li>
-                  <li className="flex items-center space-x-3 text-gray-300">
-                    <Star size={18} className="text-gold-500" />
-                    <span>Premium Dashboard & Concierge</span>
-                  </li>
-                </ul>
-                <Button fullWidth>Subscribe Annually</Button>
-              </GlassCard>
             </div>
           </div>
         </section>

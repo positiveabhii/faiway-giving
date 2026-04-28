@@ -1,48 +1,45 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Button } from "@/components/ui/Button";
-import { ArrowLeft } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
+import { ArrowLeft, RefreshCw, Loader2 } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-  const { login, user } = useAuth();
+  const { login, session, initialized, loading, user } = useAuth();
   const router = useRouter();
+
+  useEffect(() => {
+    if (initialized && session) {
+      router.replace(user?.role === 'admin' ? '/admin' : '/dashboard');
+    }
+  }, [initialized, session, user, router]);
+
+  if (!initialized) {
+    return (
+      <div className="min-h-screen bg-charcoal-950 flex flex-col items-center justify-center">
+        <Loader2 className="animate-spin text-gold-400" size={40} />
+      </div>
+    );
+  }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    setLoading(true);
-    try {
-      const success = await login(email, password);
-      if (success) {
-        if (user?.role === "subscriber") {
-          router.push("/dashboard");
-        } else if (user?.role === "admin") {
-          router.push("/admin");
-        } else {
-          router.push("/");
-        }
-      } else {
-        setError("Invalid credentials. Please check your email and password.");
-      }
-    } catch {
-      setError("Login failed. Please try again.");
-    } finally {
-      setLoading(false);
+    const success = await login(email, password);
+    if (!success) {
+      setError("Invalid credentials. Please try again.");
     }
   };
 
   return (
     <main className="min-h-screen bg-charcoal-950 flex flex-col md:flex-row relative">
-      {/* Left side: branding/visual */}
       <div className="hidden md:flex w-1/2 relative bg-charcoal-900 overflow-hidden flex-col justify-center p-12">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,_var(--tw-gradient-stops))] from-gold-500/20 via-transparent to-transparent"></div>
         <div className="relative z-10 max-w-md mx-auto">
@@ -58,7 +55,6 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* Right side: Form */}
       <div className="w-full md:w-1/2 flex items-center justify-center p-6 sm:p-12">
         <div className="w-full max-w-md relative">
           <Link href="/" className="absolute -top-16 left-0 text-gray-400 hover:text-white flex items-center space-x-2 transition-colors">
@@ -103,7 +99,7 @@ export default function LoginPage() {
               {error && <p className="text-red-400 text-sm bg-red-500/10 p-3 rounded">{error}</p>}
 
               <Button type="submit" fullWidth className="mt-8" disabled={loading}>
-                {loading ? "Signing in..." : "Sign In to Dashboard"}
+                {loading ? <RefreshCw className="animate-spin" size={18} /> : "Sign In to Dashboard"}
               </Button>
             </form>
 
@@ -114,11 +110,6 @@ export default function LoginPage() {
                   Apply for Membership
                 </Link>
               </p>
-            </div>
-
-            {/* Hidden admin login link */}
-            <div className="mt-8 pt-6 border-t border-white/10 text-center">
-              <Link href="/admin/login" className="text-xs text-gray-600 hover:text-gray-400">Admin Portal</Link>
             </div>
           </GlassCard>
         </div>

@@ -50,6 +50,16 @@ export async function upsertUserCharitySelection(userId: string, charityId: stri
   return data;
 }
 
+export async function addDonation(userId: string, charityId: string, amount: number) {
+  const { data, error } = await sb()
+    .from('charity_donations')
+    .insert({ user_id: userId, charity_id: charityId, amount })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
 export async function uploadCharityMedia(file: File, fileName: string): Promise<string> {
   const path = `charity-images/${Date.now()}_${fileName}`;
   const { error } = await sb().storage.from('charity-media').upload(path, file);

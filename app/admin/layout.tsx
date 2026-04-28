@@ -10,30 +10,15 @@ import { useAuth } from "@/hooks/useAuth";
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, isLoading, logout } = useAuth();
+  const { user, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  // Auth Protection
-  useEffect(() => {
-    if (!isLoading && pathname !== "/admin/login") {
-      if (!user || user.role !== 'admin') {
-        router.push("/admin/login");
-      }
-    }
-  }, [user, isLoading, pathname, router]);
 
   // Skip layout wrapper for login page
   if (pathname === "/admin/login") {
     return <>{children}</>;
   }
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-charcoal-900 flex items-center justify-center">
-        <Loader2 className="animate-spin text-gold-400" size={48} />
-      </div>
-    );
-  }
+  if (!user) return null;
 
   const navItems = [
     { name: "Overview", href: "/admin", icon: LayoutDashboard },

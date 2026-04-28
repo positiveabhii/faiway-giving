@@ -7,11 +7,13 @@ import { Heart, Edit2, TrendingUp, DollarSign, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import { useAppData } from "@/hooks/useAppData";
+import { DonationModal } from "@/components/dashboard/DonationModal";
 
 export default function MyCharityPage() {
   const { user } = useAuth();
-  const { charities, userCharitySelections, updateCharityContribution, isLoading } = useAppData();
+  const { charities, userCharitySelections, updateCharityContribution, submitDonation, isLoading } = useAppData();
   const [isEditing, setIsEditing] = useState(false);
+  const [isDonating, setIsDonating] = useState(false);
   const [success, setSuccess] = useState("");
 
   const userSelection = userCharitySelections.find(s => s.user_id === user?.id);
@@ -30,6 +32,11 @@ export default function MyCharityPage() {
     } catch { /* ignore */ }
   };
 
+  const handleDirectDonation = async (amount: number) => {
+    if (!selectedCharity) return;
+    await submitDonation(selectedCharity.id, amount);
+  };
+
   if (!selectedCharity) {
     return (
       <div className="max-w-5xl mx-auto">
@@ -44,6 +51,14 @@ export default function MyCharityPage() {
 
   return (
     <div className="space-y-8 max-w-5xl mx-auto">
+      <DonationModal 
+        isOpen={isDonating} 
+        onClose={() => setIsDonating(false)} 
+        charityName={selectedCharity.name} 
+        charityId={selectedCharity.id}
+        onSubmit={handleDirectDonation}
+      />
+
       <GlassCard className="p-8 border-emerald-500/20 relative overflow-hidden flex flex-col md:flex-row justify-between items-center text-center md:text-left">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-emerald-500/10 via-transparent to-transparent"></div>
         <div className="relative z-10 mb-6 md:mb-0">
@@ -127,10 +142,11 @@ export default function MyCharityPage() {
             <div className="w-12 h-12 bg-gold-500/10 rounded-full flex items-center justify-center mx-auto mb-4 text-gold-400"><DollarSign size={24} /></div>
             <h3 className="text-lg font-bold text-white mb-2">Direct Donation</h3>
             <p className="text-gray-400 text-sm mb-6 leading-relaxed">Want to make an immediate impact outside of the draw system? Make a secure, tax-deductible donation now.</p>
-            <Button fullWidth className="bg-emerald-500 hover:bg-emerald-400 text-charcoal-950 border-none glow-none">Donate Now</Button>
+            <Button fullWidth className="bg-emerald-500 hover:bg-emerald-400 text-charcoal-950 border-none glow-none" onClick={() => setIsDonating(true)}>Donate Now</Button>
           </GlassCard>
         </div>
       </div>
     </div>
   );
 }
+

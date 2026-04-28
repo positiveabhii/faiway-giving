@@ -1,184 +1,147 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import type { Profile } from "@/types/database";
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
+import { Session } from "@supabase/supabase-js";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import { Profile } from "@/types/database";
 import * as authService from "@/lib/supabase/services/auth.service";
 import * as profileService from "@/lib/supabase/services/profile.service";
 import { signupSyncUserProfile } from "@/lib/supabase/services/sync.service";
-import type { Session } from "@supabase/supabase-js";
 
 interface AuthContextType {
-  user: Profile | null;
   session: Session | null;
-  isLoading: boolean;
+  user: Profile | null;
+  initialized: boolean;
+  loading: boolean;
   login: (email: string, password: string) => Promise<boolean>;
-  signup: (data: { email: string; password: string; first_name: string; last_name: string; plan: "monthly" | "yearly"; charity_id: string; contribution_percentage: number }) => Promise<Profile>;
+  signup: (data: any) => Promise<Profile>;
   logout: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<Profile | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState<Profile | null>(null);
+  const [initialized, setInitialized] = useState(false);
+  const [loading, setLoading] = useState(false);
+  
+  const isFirstMount = useRef(true);
 
-  const loadProfile = useCallback(async (s: Session | null) => {
-    if (!s?.user) {
-      setUser(null);
-      return;
-    }
-
-    console.group(`[AuthContext] Loading profile for ${s.user.email}`);
+  const fetchProfile = useCallback(async (userId: string) => {
     try {
-      // Attempt to fetch profile
-      let profile = await profileService.getProfile(s.user.id);
-      
-      // SELF-HEAL: If profile is missing but auth user exists, sync it
-      if (!profile) {
-        console.warn('[AuthContext] Profile missing during load. Triggering self-heal...');
-        const syncResult = await signupSyncUserProfile(
-          s.user.id,
-          s.user.email || '',
-          {
-            first_name: s.user.user_metadata?.first_name || 'User',
-            last_name: s.user.user_metadata?.last_name || '',
-          },
-          'subscriber'
-        );
-        profile = syncResult.profile;
-        console.log('[AuthContext] Self-healing successful');
-      } else {
-        console.log('[AuthContext] Profile loaded successfully');
-      }
-
+      const profile = await profileService.getProfile(userId);
       setUser(profile);
     } catch (err) {
-      console.error('[AuthContext] Profile loading failed:', err);
+      console.error("[Auth] Profile fetch failed", err);
       setUser(null);
-    } finally {
-      console.groupEnd();
     }
   }, []);
 
+  const refreshProfile = useCallback(async () => {
+    if (session?.user?.id) {
+      await fetchProfile(session.user.id);
+    }
+  }, [session, fetchProfile]);
+
+  // Bootup: Run exactly once
   useEffect(() => {
+    if (!isFirstMount.current) return;
+    isFirstMount.current = false;
+
     const supabase = getSupabaseBrowserClient();
 
-    console.log('[AuthContext] Initializing auth state...');
-
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session: s } }) => {
-      setSession(s);
-      if (s) {
-        loadProfile(s).finally(() => {
-          setIsLoading(false);
-          console.log('[AuthContext] Initial session loaded');
-        });
-      } else {
-        setIsLoading(false);
-        console.log('[AuthContext] No initial session found');
+    async function initialize() {
+      console.log("[Auth] Starting initialization...");
+      try {
+        const { data: { session: s } } = await supabase.auth.getSession();
+        setSession(s);
+        if (s?.user) {
+          await fetchProfile(s.user.id);
+        }
+      } catch (err) {
+        console.error("[Auth] Bootstrap failed", err);
+      } finally {
+        setInitialized(true);
+        console.log("[Auth] Initialized.");
       }
-    });
+    }
 
-    // Listen for auth changes
+    initialize();
+
+    // Exactly one listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, s) => {
-      console.log(`[AuthContext] Auth state change: ${event}`);
+      console.log(`[Auth] State Change: ${event}`);
       setSession(s);
-      
-      if (s) {
-        await loadProfile(s);
-      } else {
+
+      if (event === "SIGNED_OUT") {
         setUser(null);
+      } else if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+        // Defer hydration to avoid lock contention during callback
+        setTimeout(() => {
+          if (s?.user) fetchProfile(s.user.id);
+        }, 0);
       }
-      
-      setIsLoading(false);
     });
 
-    return () => subscription.unsubscribe();
-  }, [loadProfile]);
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [fetchProfile]);
 
-  const login = async (email: string, password: string): Promise<boolean> => {
-    setIsLoading(true);
+  const login = async (email: string, password: string) => {
+    setLoading(true);
     try {
       const { session: s } = await authService.signIn(email, password);
       setSession(s);
-      if (s) {
-        await loadProfile(s);
-        return true;
-      }
-      return false;
+      if (s?.user) await fetchProfile(s.user.id);
+      return true;
     } catch (err) {
-      console.error('[AuthContext] Login failed:', err);
+      console.error("[Auth] Login error", err);
       return false;
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  const signup = async (data: { 
-    email: string; 
-    password: string; 
-    first_name: string; 
-    last_name: string; 
-    plan: "monthly" | "yearly"; 
-    charity_id: string; 
-    contribution_percentage: number 
-  }): Promise<Profile> => {
-    console.group('[AuthContext] Starting signup flow');
-    setIsLoading(true);
-    
+  const signup = async (data: any) => {
+    setLoading(true);
     try {
-      // 1. Auth Signup
-      console.log('[AuthContext] Step 1: Auth signup...');
-      const { user: authUser } = await authService.signUp(data.email, data.password, { 
-        first_name: data.first_name, 
-        last_name: data.last_name 
+      const { user: authUser } = await authService.signUp(data.email, data.password, {
+        first_name: data.first_name,
+        last_name: data.last_name
       });
-      
-      if (!authUser) {
-        throw new Error("Critical: Auth signup failed to return a user record.");
-      }
+      if (!authUser) throw new Error("Signup failed");
 
-      // 2. Synchronize Profile, Subscription, and Charity Selection
-      console.log('[AuthContext] Step 2: Synchronizing application data...');
-      const syncResult = await signupSyncUserProfile(
-        authUser.id,
-        data.email,
-        {
-          first_name: data.first_name,
-          last_name: data.last_name,
-          plan: data.plan,
-          charity_id: data.charity_id,
-          contribution_percentage: data.contribution_percentage
-        }
-      );
+      const syncResult = await signupSyncUserProfile(authUser.id, data.email, {
+        first_name: data.first_name,
+        last_name: data.last_name,
+        plan: data.plan,
+        charity_id: data.charity_id,
+        contribution_percentage: data.contribution_percentage
+      });
 
-      console.log('[AuthContext] Signup flow completed successfully');
       setUser(syncResult.profile);
       return syncResult.profile;
-    } catch (err) {
-      console.error('[AuthContext] Signup flow failed:', err);
-      throw err;
     } finally {
-      setIsLoading(false);
-      console.groupEnd();
+      setLoading(false);
     }
   };
 
   const logout = async () => {
-    setIsLoading(true);
+    setLoading(true);
     try {
       await authService.signOut();
-      setUser(null);
       setSession(null);
+      setUser(null);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, isLoading, login, signup, logout }}>
+    <AuthContext.Provider value={{ session, user, initialized, loading, login, signup, logout, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );
@@ -186,6 +149,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (context === undefined) throw new Error("useAuth must be used within an AuthProvider");
+  if (context === undefined) throw new Error("useAuth must be used within AuthProvider");
   return context;
 }

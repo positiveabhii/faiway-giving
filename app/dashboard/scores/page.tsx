@@ -8,8 +8,21 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useAppData } from "@/hooks/useAppData";
 import { useAuth } from "@/hooks/useAuth";
 
+function ScoresSkeleton() {
+  return (
+    <div className="space-y-8 animate-pulse max-w-5xl mx-auto">
+      <div className="h-64 bg-charcoal-900 rounded-2xl border border-white/5"></div>
+      <div className="space-y-4">
+        <div className="h-8 w-48 bg-charcoal-900 rounded mx-auto"></div>
+        <div className="h-32 bg-charcoal-900 rounded-2xl border border-white/5"></div>
+        <div className="h-32 bg-charcoal-900 rounded-2xl border border-white/5"></div>
+      </div>
+    </div>
+  );
+}
+
 export default function ScoresPage() {
-  const { scores, submitScore, removeScore, isLoading } = useAppData();
+  const { scores, submitScore, removeScore, isLoading, moduleLoading } = useAppData();
   const { user } = useAuth();
   const [newScore, setNewScore] = useState("");
   const [newDate, setNewDate] = useState("");
@@ -45,14 +58,15 @@ export default function ScoresPage() {
     try { await removeScore(id); } catch { setError("Failed to delete score."); }
   };
 
-  if (isLoading) return <div className="flex items-center justify-center h-64"><Loader2 className="animate-spin text-gold-400" size={32} /></div>;
+  // Only block the entire page on bootstrap isLoading
+  if (isLoading) return <ScoresSkeleton />;
 
   return (
     <div className="space-y-8 max-w-5xl mx-auto">
       <GlassCard className="p-8 border-white/5">
         <div className="mb-6">
           <h2 className="text-2xl font-bold text-white mb-2">Record Performance</h2>
-          <p className="text-gray-400">Enter your official round scores. Your top 5 valid scores this month will generate your Draw Ticket.</p>
+          <p className="text-gray-400 text-sm">Please enter one of your 5 most recent Stableford rounds from the last 6 months.</p>
         </div>
         <form onSubmit={handleAddScore} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -60,11 +74,18 @@ export default function ScoresPage() {
               <label className="block text-sm font-medium text-gray-300 mb-2">Date of Round</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none"><Calendar size={18} className="text-gray-500" /></div>
-                <input type="date" max={new Date().toISOString().split('T')[0]} value={newDate} onChange={(e) => setNewDate(e.target.value)} className="w-full bg-charcoal-900/50 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-white focus:outline-none focus:border-gold-500/50 [color-scheme:dark]" />
+                <input 
+                  type="date" 
+                  max={new Date().toISOString().split('T')[0]} 
+                  min={new Date(new Date().setMonth(new Date().getMonth() - 6)).toISOString().split('T')[0]}
+                  value={newDate} 
+                  onChange={(e) => setNewDate(e.target.value)} 
+                  className="w-full bg-charcoal-900/50 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-white focus:outline-none focus:border-gold-500/50 [color-scheme:dark]" 
+                />
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Stableford / Adjusted Score (1-45)</label>
+              <label className="block text-sm font-medium text-gray-300 mb-2">Stableford Score (1-45)</label>
               <input type="number" min="1" max="45" value={newScore} onChange={(e) => setNewScore(e.target.value)} placeholder="e.g., 36" className="w-full bg-charcoal-900/50 border border-white/10 rounded-xl py-3 px-4 text-white placeholder-gray-600 focus:outline-none focus:border-gold-500/50" />
             </div>
           </div>
@@ -78,7 +99,13 @@ export default function ScoresPage() {
 
       <div>
         <h3 className="text-xl font-bold text-white mb-6">Current Draw Ticket (Latest 5 Scores)</h3>
-        {userScores.length === 0 ? (
+        
+        {moduleLoading.scores ? (
+          <div className="space-y-4">
+            <div className="h-32 bg-charcoal-900/50 rounded-2xl border border-white/5 animate-pulse"></div>
+            <div className="h-32 bg-charcoal-900/50 rounded-2xl border border-white/5 animate-pulse"></div>
+          </div>
+        ) : userScores.length === 0 ? (
           <GlassCard className="p-12 text-center border-white/5 border-dashed">
             <p className="text-gray-500 mb-2">No scores recorded this month.</p>
             <p className="text-sm text-gray-600">Submit scores above to build your ticket.</p>

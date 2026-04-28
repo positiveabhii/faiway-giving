@@ -1,15 +1,25 @@
 import { createBrowserClient } from '@supabase/ssr';
 import type { Database } from '@/types/database';
 
-let client: ReturnType<typeof createBrowserClient<Database>> | null = null;
-
+/**
+ * Singleton factory for Supabase Browser Client.
+ * Uses globalThis to ensure exactly one instance exists per browser tab,
+ * preventing NavigatorLockAcquireTimeoutError from multiple Auth managers.
+ */
 export function getSupabaseBrowserClient() {
-  if (client) return client;
+  const global = globalThis as any;
 
-  client = createBrowserClient<Database>(
+  if (global.__supabase_browser_client__) {
+    return global.__supabase_browser_client__;
+  }
+
+  console.log('%c[Supabase] 🛡️ CREATING SINGLETON BROWSER CLIENT', 'color: #ec4899; font-weight: bold; font-size: 14px;');
+
+  const client = createBrowserClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
+  global.__supabase_browser_client__ = client;
   return client;
 }

@@ -4,11 +4,20 @@ import type { Profile } from '@/types/database';
 const sb = () => getSupabaseBrowserClient();
 
 export async function getProfile(userId: string): Promise<Profile | null> {
+  console.log(`[ProfileService] Fetching profile for ID: ${userId}...`);
   const { data, error } = await sb().from('profiles').select('*').eq('id', userId).maybeSingle();
+  
   if (error) {
-    console.error(`[ProfileService] Error fetching profile for ${userId}:`, error);
+    console.error(`[ProfileService] ERROR fetching profile for ${userId}:`, error);
     throw error;
   }
+  
+  if (!data) {
+    console.warn(`[ProfileService] No profile found for ${userId} (null result)`);
+  } else {
+    console.log(`[ProfileService] Profile found for ${userId}:`, data);
+  }
+  
   return data;
 }
 
