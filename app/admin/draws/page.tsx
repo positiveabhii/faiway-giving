@@ -3,13 +3,15 @@
 import React, { useState } from "react";
 import { useAppData } from "@/hooks/useAppData";
 import { Ticket, Settings, Zap, Play, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import type { DrawSimulationResult } from "@/types/domain";
 
 export default function AdminDrawsPage() {
   const { draws, prizePools, scores, simulateDraw, publishDraw, isLoading } = useAppData();
   const [logicMode, setLogicMode] = useState<"random" | "algorithmic">("random");
   const [isSimulating, setIsSimulating] = useState(false);
-  const [simulationResult, setSimulationResult] = useState<any>(null);
+  const [simulationResult, setSimulationResult] = useState<DrawSimulationResult | null>(null);
   const [publishStatus, setPublishStatus] = useState("");
+  const [isPublishing, setIsPublishing] = useState(false);
 
   if (isLoading) return <div className="flex items-center justify-center h-64"><Loader2 className="animate-spin text-gold-400" size={32} /></div>;
 
@@ -32,13 +34,16 @@ export default function AdminDrawsPage() {
 
   const handlePublish = async () => {
     if (!upcomingDraw || !simulationResult) return;
+    setIsPublishing(true);
     try {
-      await publishDraw(upcomingDraw.id, simulationResult);
+      await publishDraw(upcomingDraw.id, simulationResult, logicMode);
       setPublishStatus("Result published successfully to all users.");
       setTimeout(() => setPublishStatus(""), 4000);
       setSimulationResult(null);
     } catch (err) {
-      setPublishStatus("Error publishing result.");
+      setPublishStatus(err instanceof Error ? err.message : "Error publishing result.");
+    } finally {
+      setIsPublishing(false);
     }
   };
 
@@ -105,8 +110,8 @@ export default function AdminDrawsPage() {
                           <button onClick={handleSimulate} className="flex-1 bg-charcoal-800 hover:bg-charcoal-700 text-white py-3 rounded-lg text-sm font-bold transition-colors">
                             Re-roll
                           </button>
-                          <button onClick={handlePublish} className="flex-1 bg-emerald-500 hover:bg-emerald-400 text-charcoal-950 py-3 rounded-lg text-sm font-bold transition-colors">
-                            Publish Official Result
+                          <button onClick={handlePublish} disabled={isPublishing} className="flex-1 bg-emerald-500 hover:bg-emerald-400 text-charcoal-950 py-3 rounded-lg text-sm font-bold transition-colors disabled:opacity-60">
+                            {isPublishing ? "Publishing..." : "Publish Official Result"}
                           </button>
                         </div>
                         <p className="mt-4 text-xs text-gray-500">Winners found in this simulation: {simulationResult.winners.length}</p>

@@ -15,6 +15,8 @@ export default function MyCharityPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [isDonating, setIsDonating] = useState(false);
   const [success, setSuccess] = useState("");
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const userSelection = userCharitySelections.find(s => s.user_id === user?.id);
   const selectedCharity = userSelection ? charities.find(c => c.id === userSelection.charity_id) : null;
@@ -24,12 +26,18 @@ export default function MyCharityPage() {
 
   const handleSave = async () => {
     if (!userSelection) return;
+    setSaving(true);
+    setError("");
     try {
       await updateCharityContribution(userSelection.charity_id, contribution);
       setIsEditing(false);
       setSuccess("Contribution percentage updated successfully.");
       setTimeout(() => setSuccess(""), 3000);
-    } catch { /* ignore */ }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "We could not update your charity contribution.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleDirectDonation = async (amount: number) => {
@@ -127,12 +135,13 @@ export default function MyCharityPage() {
                 <input type="range" min="5" max="50" step="5" value={contribution} onChange={(e) => setContribution(parseInt(e.target.value))} className="w-full accent-emerald-500" />
                 <div className="flex space-x-3">
                   <Button variant="outline" className="flex-1" onClick={() => { setIsEditing(false); setContribution(userSelection?.contribution_percentage ?? 10); }}>Cancel</Button>
-                  <Button className="flex-1" onClick={handleSave}>Save</Button>
+                  <Button className="flex-1" onClick={handleSave} disabled={saving}>{saving ? "Saving..." : "Save"}</Button>
                 </div>
               </div>
             ) : (
               <div className="space-y-4">
                 {success && <p className="text-emerald-400 text-xs text-center mb-2">{success}</p>}
+                {error && <p className="text-red-400 text-xs text-center mb-2">{error}</p>}
                 <Button variant="secondary" fullWidth onClick={() => setIsEditing(true)}>Adjust Percentage</Button>
               </div>
             )}
@@ -149,4 +158,3 @@ export default function MyCharityPage() {
     </div>
   );
 }
-

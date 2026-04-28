@@ -2,11 +2,9 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { Session } from "@supabase/supabase-js";
-import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { Profile } from "@/types/database";
-import * as authService from "@/lib/supabase/services/auth.service";
-import * as profileService from "@/lib/supabase/services/profile.service";
-import { signupSyncUserProfile } from "@/lib/supabase/services/sync.service";
+import { getAuthSession, login as loginApi, logout as logoutApi, signup as signupApi } from "@/lib/api/auth";
+import type { SignupRequest } from "@/types/api";
 
 interface AuthContextType {
   session: Session | null;
@@ -14,7 +12,7 @@ interface AuthContextType {
   initialized: boolean;
   loading: boolean;
   login: (email: string, password: string) => Promise<boolean>;
-  signup: (data: any) => Promise<Profile>;
+  signup: (data: SignupRequest) => Promise<Profile>;
   logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -29,10 +27,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   
   const isFirstMount = useRef(true);
 
-  const fetchProfile = useCallback(async (userId: string) => {
+  const fetchProfile = useCallback(async () => {
     try {
-      const profile = await profileService.getProfile(userId);
-      setUser(profile);
+      const current = await getAuthSession();
+      setSession(current.session);
+      setUser(current.profile);
     } catch (err) {
       console.error("[Auth] Profile fetch failed", err);
       setUser(null);
@@ -40,26 +39,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const refreshProfile = useCallback(async () => {
-    if (session?.user?.id) {
-      await fetchProfile(session.user.id);
-    }
-  }, [session, fetchProfile]);
+    await fetchProfile();
+  }, [fetchProfile]);
 
   // Bootup: Run exactly once
   useEffect(() => {
     if (!isFirstMount.current) return;
     isFirstMount.current = false;
 
-    const supabase = getSupabaseBrowserClient();
-
     async function initialize() {
       console.log("[Auth] Starting initialization...");
       try {
-        const { data: { session: s } } = await supabase.auth.getSession();
-        setSession(s);
-        if (s?.user) {
-          await fetchProfile(s.user.id);
-        }
+        const current = await getAuthSession();
+        setSession(current.session);
+        setUser(current.profile);
       } catch (err) {
         console.error("[Auth] Bootstrap failed", err);
       } finally {
@@ -69,34 +62,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     initialize();
-
-    // Exactly one listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, s) => {
-      console.log(`[Auth] State Change: ${event}`);
-      setSession(s);
-
-      if (event === "SIGNED_OUT") {
-        setUser(null);
-      } else if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
-        // Defer hydration to avoid lock contention during callback
-        setTimeout(() => {
-          if (s?.user) fetchProfile(s.user.id);
-        }, 0);
-      }
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
   }, [fetchProfile]);
 
   const login = async (email: string, password: string) => {
     setLoading(true);
     try {
-      const { session: s } = await authService.signIn(email, password);
-      setSession(s);
-      if (s?.user) await fetchProfile(s.user.id);
-      return true;
+      const result = await loginApi({ email, password });
+      setSession(result.session);
+      setUser(result.profile);
+      return Boolean(result.session);
     } catch (err) {
       console.error("[Auth] Login error", err);
       return false;
@@ -105,25 +79,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const signup = async (data: any) => {
+  const signup = async (data: SignupRequest) => {
     setLoading(true);
     try {
-      const { user: authUser } = await authService.signUp(data.email, data.password, {
-        first_name: data.first_name,
-        last_name: data.last_name
-      });
-      if (!authUser) throw new Error("Signup failed");
-
-      const syncResult = await signupSyncUserProfile(authUser.id, data.email, {
-        first_name: data.first_name,
-        last_name: data.last_name,
-        plan: data.plan,
-        charity_id: data.charity_id,
-        contribution_percentage: data.contribution_percentage
-      });
-
-      setUser(syncResult.profile);
-      return syncResult.profile;
+      const result = await signupApi(data);
+      setSession(result.session);
+      setUser(result.profile);
+      return result.profile;
     } finally {
       setLoading(false);
     }
@@ -132,7 +94,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = async () => {
     setLoading(true);
     try {
-      await authService.signOut();
+      await logoutApi();
       setSession(null);
       setUser(null);
     } finally {

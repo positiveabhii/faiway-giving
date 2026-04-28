@@ -47,7 +47,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { name: "Settings", href: "/dashboard/profile", icon: Settings },
   ];
 
-  const SidebarContent = () => (
+  const renderSidebarContent = () => (
     <div className="flex flex-col h-full bg-charcoal-900 border-r border-white/5 w-64">
       <div className="p-6">
         <Link href="/" className="inline-block">
@@ -95,7 +95,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div className="min-h-screen bg-charcoal-950 flex selection:bg-gold-500/30">
       <div className="hidden md:block fixed inset-y-0 left-0 z-40">
-        <SidebarContent />
+        {renderSidebarContent()}
       </div>
 
       <div className="flex-1 md:pl-64 flex flex-col min-h-screen">
@@ -176,7 +176,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               transition={{ type: "spring", bounce: 0, duration: 0.4 }}
               className="fixed inset-y-0 left-0 z-50 w-64 md:hidden"
             >
-              <SidebarContent />
+              {renderSidebarContent()}
             </motion.div>
           </>
         )}

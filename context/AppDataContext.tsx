@@ -1,17 +1,17 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { useAuth } from "./AuthContext";
-import * as charityService from "@/lib/supabase/services/charity.service";
-import * as scoreService from "@/lib/supabase/services/score.service";
-import * as drawService from "@/lib/supabase/services/draw.service";
-import * as prizeService from "@/lib/supabase/services/prize.service";
-import * as notificationService from "@/lib/supabase/services/notification.service";
-import * as profileService from "@/lib/supabase/services/profile.service";
-import * as winnerService from "@/lib/supabase/services/winner.service";
+import { getAppData } from "@/lib/api/app-data";
+import * as scoreApi from "@/lib/api/scores";
+import * as donationApi from "@/lib/api/donations";
+import * as charitySelectionApi from "@/lib/api/charity-selection";
+import * as drawApi from "@/lib/api/draw";
+import * as winnerApi from "@/lib/api/winners";
+import * as notificationApi from "@/lib/api/notifications";
 import { runDrawSimulation, UserDrawEntry } from "@/lib/utils/draw-engine";
-import { calculatePayouts } from "@/lib/utils/prize-engine";
 import type { Profile, Subscription, Charity, UserCharitySelection, GolfScore, DrawResult, PrizePool, DrawWinner, WinnerVerification, Notification } from "@/types/database";
+import type { DrawMode, DrawSimulationResult } from "@/types/domain";
 
 interface AppDataContextType {
   charities: Charity[];
@@ -35,14 +35,14 @@ interface AppDataContextType {
   submitProof: (winnerId: string, file: File) => Promise<void>;
   approveVerification: (id: string) => Promise<void>;
   rejectVerification: (id: string) => Promise<void>;
-  simulateDraw: (drawId: string, mode: "random" | "algorithmic") => any;
-  publishDraw: (drawId: string, result: any) => Promise<void>;
+  simulateDraw: (drawId: string, mode: DrawMode) => DrawSimulationResult;
+  publishDraw: (drawId: string, result: DrawSimulationResult, mode?: DrawMode) => Promise<void>;
 }
 
 const AppDataContext = createContext<AppDataContextType | undefined>(undefined);
 
 export function AppDataProvider({ children }: { children: React.ReactNode }) {
-  const { session, user, initialized } = useAuth();
+  const { session, initialized } = useAuth();
   
   const [charities, setCharities] = useState<Charity[]>([]);
   const [scores, setScores] = useState<GolfScore[]>([]);
@@ -59,7 +59,6 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null);
 
   const userId = session?.user?.id;
-  const userRole = user?.role;
 
   const fetchData = useCallback(async () => {
     if (!initialized) return;
@@ -67,53 +66,27 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
     console.log("[AppData] Passive fetch initiated...");
     try {
       // 1. Public Data (Always fetch)
-      const [charData, drawData, poolData] = await Promise.all([
-        charityService.getAllCharities(),
-        drawService.getAllDraws(),
-        prizeService.getAllPrizePools()
-      ]);
-      setCharities(charData);
-      setDraws(drawData);
-      setPrizePools(poolData);
-
-      // 2. Auth-dependent Data
-      if (userId) {
-        const [scoreData, subData, winData, notifData] = await Promise.all([
-          userRole === 'admin' ? scoreService.getAllScores() : scoreService.getScoresForUser(userId),
-          prizeService.getAllSubscriptions(),
-          userRole === 'admin' ? drawService.getAllWinners() : drawService.getWinnersForUser(userId),
-          notificationService.getNotificationsForUser(userId)
-        ]);
-
-        setScores(scoreData);
-        setSubscriptions(subData);
-        setWinnings(winData);
-        setNotifications(notifData);
-
-        if (userRole === 'admin') {
-          const [profData, verData, selData] = await Promise.all([
-            profileService.getAllProfiles(),
-            winnerService.getAllVerifications(),
-            charityService.getAllUserCharitySelections()
-          ]);
-          setUsers(profData);
-          setVerifications(verData);
-          setUserCharitySelections(selData);
-        } else {
-          const sel = await charityService.getUserCharitySelection(userId);
-          setUserCharitySelections(sel ? [sel] : []);
-        }
-      }
+      const data = await getAppData();
+      setCharities(data.charities);
+      setDraws(data.draws);
+      setPrizePools(data.prizePools);
+      setScores(data.scores);
+      setSubscriptions(data.subscriptions);
+      setWinnings(data.winnings);
+      setNotifications(data.notifications);
+      setUsers(data.users);
+      setVerifications(data.verifications);
+      setUserCharitySelections(data.userCharitySelections);
     } catch (err) {
       console.error("[AppData] Fetch failed", err);
       setError("Failed to sync application data.");
     } finally {
       setIsLoading(false);
     }
-  }, [initialized, userId, userRole]);
+  }, [initialized]);
 
   useEffect(() => {
-    fetchData();
+    void Promise.resolve().then(fetchData);
   }, [fetchData]);
 
   const refreshAll = async () => {
@@ -122,25 +95,25 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
 
   const submitScore = async (val: number, date: string) => {
     if (!userId) return;
-    await scoreService.addScore(userId, val, date);
+    await scoreApi.createScore({ score_value: val, played_date: date });
     await fetchData();
   };
 
   const removeScore = async (id: string) => {
-    await scoreService.deleteScore(id);
+    await scoreApi.deleteScore({ score_id: id });
     await fetchData();
   };
 
   const updateCharityContribution = async (charId: string, pct: number) => {
     if (!userId) return;
-    await charityService.upsertUserCharitySelection(userId, charId, pct);
+    await charitySelectionApi.updateCharitySelection({ charity_id: charId, contribution_percentage: pct });
     await fetchData();
   };
 
   const submitDonation = async (charId: string, amt: number) => {
     if (!userId) throw new Error("Authentication required to donate");
     try {
-      await charityService.addDonation(userId, charId, amt);
+      await donationApi.createDonation({ charity_id: charId, amount: amt });
       await fetchData();
     } catch (err) {
       console.error("[AppData] submitDonation failed:", err);
@@ -149,30 +122,29 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
   };
 
   const markNotificationRead = async (id: string) => {
-    await notificationService.markAsRead(id);
+    await notificationApi.markNotificationRead({ notification_id: id });
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
   };
 
   const submitProof = async (winnerId: string, file: File) => {
     if (!userId) return;
-    await winnerService.uploadProof(file, winnerId);
-    await winnerService.createVerification(winnerId, userId);
+    await winnerApi.submitWinnerProof(winnerId, file);
     await fetchData();
   };
 
   const approveVerification = async (id: string) => {
     if (!userId) return;
-    await winnerService.approveVerification(id, userId);
+    await winnerApi.approveWinnerVerification(id);
     await fetchData();
   };
 
   const rejectVerification = async (id: string) => {
     if (!userId) return;
-    await winnerService.rejectVerification(id, userId);
+    await winnerApi.rejectWinnerVerification(id);
     await fetchData();
   };
 
-  const simulateDraw = useCallback((drawId: string, mode: "random" | "algorithmic") => {
+  const simulateDraw = useCallback((drawId: string, mode: DrawMode): DrawSimulationResult => {
     const entriesMap = new Map<string, number[]>();
     scores.forEach((s) => {
       if (!entriesMap.has(s.user_id)) entriesMap.set(s.user_id, []);
@@ -184,14 +156,9 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
     return runDrawSimulation(entries, mode);
   }, [scores]);
 
-  const publishDraw = async (drawId: string, result: any) => {
+  const publishDraw = async (drawId: string, _result: DrawSimulationResult, mode: DrawMode = "random") => {
     if (!userId) return;
-    const pool = prizePools.find((p) => p.draw_id === drawId);
-    if (!pool) return;
-    await drawService.publishDrawResult(drawId, result.luckyNumbers, scores.length);
-    const { payouts } = calculatePayouts(pool, result.winners);
-    const rows = payouts.map((p) => ({ draw_id: drawId, user_id: p.user_id, match_type: p.match_type, prize_amount: p.prize_amount }));
-    await drawService.createDrawWinners(rows);
+    await drawApi.executeDraw({ draw_id: drawId, mode });
     await fetchData();
   };
 

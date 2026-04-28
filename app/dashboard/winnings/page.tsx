@@ -12,6 +12,7 @@ export default function WinningsPage() {
   const { winnings, isLoading, submitProof } = useAppData();
   const [uploadState, setUploadState] = useState<"idle" | "uploading" | "success">("idle");
   const [selectedWinnerId, setSelectedWinnerId] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState("");
 
   if (isLoading || !user) return <div className="flex items-center justify-center h-64"><Loader2 className="animate-spin text-gold-400" size={32} /></div>;
 
@@ -24,10 +25,12 @@ export default function WinningsPage() {
     const winnerId = selectedWinnerId || pendingWin?.id;
     if (!file || !winnerId) return;
     setUploadState("uploading");
+    setUploadError("");
     try {
       await submitProof(winnerId, file);
       setUploadState("success");
-    } catch {
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : "Proof upload failed. Please try again.");
       setUploadState("idle");
     }
   };
@@ -132,6 +135,9 @@ export default function WinningsPage() {
               <Clock className="text-blue-400 flex-shrink-0 mt-0.5" size={16} />
               <p className="text-xs text-blue-300 leading-relaxed">Verification typically takes 24-48 hours. Once approved, your payout will be initiated directly to your registered bank account via wire transfer.</p>
             </div>
+            {uploadError && (
+              <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 text-red-400 text-sm">{uploadError}</div>
+            )}
           </GlassCard>
         </div>
       </div>

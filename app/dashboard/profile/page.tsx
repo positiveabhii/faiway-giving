@@ -5,18 +5,19 @@ import { Button } from "@/components/ui/Button";
 import { User, CreditCard, Bell, CheckCircle2, Loader2, Mail, Calendar } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useAppData } from "@/hooks/useAppData";
-import * as profileService from "@/lib/supabase/services/profile.service";
+import { updateAdminUser } from "@/lib/api/admin-users";
 
 type TabType = "personal" | "billing" | "notifications";
 
 export default function ProfilePage() {
-  const { user } = useAuth();
+  const { user, refreshProfile } = useAuth();
   const { subscriptions, notifications, markNotificationRead, isLoading } = useAppData();
   const [activeTab, setActiveTab] = useState<TabType>("personal");
   const [successMsg, setSuccessMsg] = useState("");
   const [firstName, setFirstName] = useState(user?.first_name ?? "");
   const [lastName, setLastName] = useState(user?.last_name ?? "");
   const [saving, setSaving] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
 
   if (isLoading || !user) return <div className="flex items-center justify-center h-64"><Loader2 className="animate-spin text-gold-400" size={32} /></div>;
 
@@ -26,11 +27,16 @@ export default function ProfilePage() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
+    setErrorMsg("");
     try {
-      await profileService.updateProfile(user.id, { first_name: firstName, last_name: lastName });
+      await updateAdminUser({ user_id: user.id, first_name: firstName, last_name: lastName });
+      await refreshProfile();
       setSuccessMsg("Settings updated successfully.");
       setTimeout(() => setSuccessMsg(""), 3000);
-    } catch { setSuccessMsg(""); }
+    } catch (err) {
+      setSuccessMsg("");
+      setErrorMsg(err instanceof Error ? err.message : "We could not save your profile changes.");
+    }
     finally { setSaving(false); }
   };
 
@@ -103,6 +109,9 @@ export default function ProfilePage() {
                 </div>
                 {successMsg && (
                   <div className="flex items-center space-x-2 text-emerald-400 bg-emerald-500/10 px-4 py-3 rounded-lg text-sm border border-emerald-500/20"><CheckCircle2 size={16} /><span>{successMsg}</span></div>
+                )}
+                {errorMsg && (
+                  <div className="text-red-400 bg-red-500/10 px-4 py-3 rounded-lg text-sm border border-red-500/20">{errorMsg}</div>
                 )}
                 <div className="pt-4 border-t border-white/10 flex justify-end">
                   <Button type="submit" disabled={saving}>{saving ? "Saving..." : "Save Changes"}</Button>

@@ -2,22 +2,27 @@
 
 import React, { useState } from "react";
 import { useAppData } from "@/hooks/useAppData";
-import * as charityService from "@/lib/supabase/services/charity.service";
+import { createAdminCharity, deleteAdminCharity, updateAdminCharity } from "@/lib/api/admin-charities";
 import { Search, Plus, Edit2, Trash2, Star, Image as ImageIcon, Loader2 } from "lucide-react";
+import type { Charity } from "@/types/database";
+import type { CharityWriteRequest } from "@/types/api";
 
 export default function AdminCharitiesPage() {
   const { charities, refreshAll, isLoading } = useAppData();
   const [isEditing, setIsEditing] = useState(false);
-  const [currentEdit, setCurrentEdit] = useState<any>(null);
+  const [currentEdit, setCurrentEdit] = useState<CharityWriteRequest | (CharityWriteRequest & { id: string }) | null>(null);
   const [search, setSearch] = useState("");
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
 
   if (isLoading) return <div className="flex items-center justify-center h-64"><Loader2 className="animate-spin text-gold-400" size={32} /></div>;
 
   const filteredCharities = charities.filter(c => c.name.toLowerCase().includes(search.toLowerCase()));
 
-  const handleEdit = (charity: any) => {
+  const handleEdit = (charity: Charity) => {
     setCurrentEdit(charity);
     setIsEditing(true);
+    setError("");
   };
 
   const handleAddNew = () => {
@@ -31,27 +36,38 @@ export default function AdminCharitiesPage() {
       upcoming_events: 0
     });
     setIsEditing(true);
+    setError("");
   };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!currentEdit) return;
+    setSaving(true);
+    setError("");
     try {
       if (currentEdit.id) {
-        await charityService.updateCharity(currentEdit.id, currentEdit);
+        await updateAdminCharity({ ...currentEdit, id: currentEdit.id });
       } else {
-        await charityService.createCharity(currentEdit);
+        await createAdminCharity(currentEdit);
       }
       setIsEditing(false);
-      refreshAll();
+      await refreshAll();
     } catch (err) {
-      console.error(err);
+      setError(err instanceof Error ? err.message : "Unable to save this charity.");
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleDelete = async (id: string) => {
     if (confirm("Are you sure you want to delete this charity?")) {
-      await charityService.deleteCharity(id);
-      refreshAll();
+      setError("");
+      try {
+        await deleteAdminCharity({ id });
+        await refreshAll();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Unable to delete this charity.");
+      }
     }
   };
 
@@ -60,6 +76,7 @@ export default function AdminCharitiesPage() {
       
       {!isEditing ? (
         <div className="bg-charcoal-900 border border-white/5 rounded-xl p-6">
+          {error && <div className="mb-4 text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3 text-sm">{error}</div>}
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
             <h2 className="text-xl font-bold text-white">Charity Partners</h2>
             <div className="flex w-full md:w-auto space-x-4">
@@ -86,7 +103,7 @@ export default function AdminCharitiesPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredCharities.map((charity, index) => (
+            {filteredCharities.map((charity) => (
               <div key={charity.id} className="bg-charcoal-950 border border-white/5 rounded-xl overflow-hidden flex flex-col group relative">
                 {charity.is_spotlight && (
                   <div className="absolute top-2 right-2 bg-gold-500 text-charcoal-950 text-xs font-bold px-2 py-1 rounded z-10 flex items-center space-x-1 shadow-lg">
@@ -129,6 +146,7 @@ export default function AdminCharitiesPage() {
           <h2 className="text-xl font-bold text-white mb-6">
             {currentEdit?.id ? "Edit Partner Profile" : "Add New Partner"}
           </h2>
+          {error && <div className="mb-4 text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3 text-sm">{error}</div>}
           
           <form onSubmit={handleSave} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -137,8 +155,8 @@ export default function AdminCharitiesPage() {
                   <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Organization Name</label>
                   <input 
                     type="text" 
-                    value={currentEdit?.name} 
-                    onChange={e => setCurrentEdit({...currentEdit, name: e.target.value})}
+                    value={currentEdit?.name ?? ""} 
+                    onChange={e => currentEdit && setCurrentEdit({...currentEdit, name: e.target.value})}
                     className="w-full bg-charcoal-950 border border-white/10 rounded-lg px-4 py-2 text-white text-sm focus:outline-none focus:border-gold-500/50" 
                   />
                 </div>
@@ -146,8 +164,8 @@ export default function AdminCharitiesPage() {
                   <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Category Tags (comma separated)</label>
                   <input 
                     type="text" 
-                    value={currentEdit?.tags?.join(", ")} 
-                    onChange={e => setCurrentEdit({...currentEdit, tags: e.target.value.split(",").map(t => t.trim())})}
+                    value={currentEdit?.tags?.join(", ") ?? ""} 
+                    onChange={e => currentEdit && setCurrentEdit({...currentEdit, tags: e.target.value.split(",").map(t => t.trim()).filter(Boolean)})}
                     className="w-full bg-charcoal-950 border border-white/10 rounded-lg px-4 py-2 text-white text-sm focus:outline-none focus:border-gold-500/50" 
                   />
                 </div>
@@ -157,14 +175,14 @@ export default function AdminCharitiesPage() {
                 <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Profile Image URL</label>
                 <input 
                     type="text" 
-                    value={currentEdit?.image_url} 
-                    onChange={e => setCurrentEdit({...currentEdit, image_url: e.target.value})}
+                    value={currentEdit?.image_url ?? ""} 
+                    onChange={e => currentEdit && setCurrentEdit({...currentEdit, image_url: e.target.value})}
                     placeholder="https://..."
                     className="w-full bg-charcoal-950 border border-white/10 rounded-lg px-4 py-2 text-white text-sm focus:outline-none focus:border-gold-500/50 mb-4" 
                   />
                 <div className="border-2 border-dashed border-white/10 rounded-lg h-32 flex flex-col items-center justify-center relative overflow-hidden">
                   {currentEdit?.image_url ? (
-                    <img src={currentEdit.image_url} className="absolute inset-0 w-full h-full object-cover opacity-40" />
+                    <img src={currentEdit.image_url} alt="" className="absolute inset-0 w-full h-full object-cover opacity-40" />
                   ) : (
                     <ImageIcon size={24} className="text-gray-500 mb-2" />
                   )}
@@ -176,8 +194,8 @@ export default function AdminCharitiesPage() {
               <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Mission Statement / Description</label>
               <textarea 
                 rows={4} 
-                value={currentEdit?.mission} 
-                onChange={e => setCurrentEdit({...currentEdit, mission: e.target.value})}
+                value={currentEdit?.mission ?? ""} 
+                onChange={e => currentEdit && setCurrentEdit({...currentEdit, mission: e.target.value})}
                 className="w-full bg-charcoal-950 border border-white/10 rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:border-gold-500/50 resize-none"
               ></textarea>
             </div>
@@ -192,7 +210,7 @@ export default function AdminCharitiesPage() {
               </div>
               <button 
                 type="button"
-                onClick={() => setCurrentEdit({...currentEdit, is_spotlight: !currentEdit.is_spotlight})}
+                onClick={() => currentEdit && setCurrentEdit({...currentEdit, is_spotlight: !currentEdit.is_spotlight})}
                 className="w-12 h-6 bg-charcoal-800 rounded-full relative cursor-pointer border border-white/10 transition-colors"
               >
                 <div className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full transition-transform ${currentEdit?.is_spotlight ? 'translate-x-6 bg-gold-400' : 'bg-gray-500'}`}></div>
@@ -203,8 +221,8 @@ export default function AdminCharitiesPage() {
               <button type="button" onClick={() => setIsEditing(false)} className="px-6 py-2 rounded-lg text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-colors">
                 Cancel
               </button>
-              <button type="submit" className="px-6 py-2 rounded-lg text-sm font-bold bg-white text-charcoal-950 hover:bg-gray-200 transition-colors">
-                Save Profile
+              <button type="submit" disabled={saving} className="px-6 py-2 rounded-lg text-sm font-bold bg-white text-charcoal-950 hover:bg-gray-200 transition-colors disabled:opacity-60">
+                {saving ? "Saving..." : "Save Profile"}
               </button>
             </div>
           </form>

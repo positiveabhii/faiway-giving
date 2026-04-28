@@ -3,10 +3,13 @@
 import React, { useState } from "react";
 import { useAppData } from "@/hooks/useAppData";
 import { Search, Edit, Ban, FileText, Loader2 } from "lucide-react";
+import { updateAdminUser } from "@/lib/api/admin-users";
 
 export default function AdminUsersPage() {
-  const { users, subscriptions, isLoading } = useAppData();
+  const { users, subscriptions, refreshAll, isLoading } = useAppData();
   const [search, setSearch] = useState("");
+  const [actionError, setActionError] = useState("");
+  const [activeUserId, setActiveUserId] = useState<string | null>(null);
 
   if (isLoading) return <div className="flex items-center justify-center h-64"><Loader2 className="animate-spin text-gold-400" size={32} /></div>;
 
@@ -16,10 +19,24 @@ export default function AdminUsersPage() {
     u.email.toLowerCase().includes(search.toLowerCase())
   );
 
+  const toggleStatus = async (userId: string, currentStatus: "active" | "suspended") => {
+    setActiveUserId(userId);
+    setActionError("");
+    try {
+      await updateAdminUser({ user_id: userId, status: currentStatus === "active" ? "suspended" : "active" });
+      await refreshAll();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Unable to update this user.");
+    } finally {
+      setActiveUserId(null);
+    }
+  };
+
   return (
     <div className="space-y-6">
       
       <div className="bg-charcoal-900 border border-white/5 rounded-xl p-6">
+        {actionError && <div className="mb-4 text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3 text-sm">{actionError}</div>}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
           <h2 className="text-xl font-bold text-white">User Management</h2>
           <div className="relative w-full md:w-96">
@@ -76,7 +93,12 @@ export default function AdminUsersPage() {
                         <button className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors" title="Edit Profile">
                           <Edit size={16} />
                         </button>
-                        <button className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors" title="Suspend User">
+                        <button
+                          onClick={() => toggleStatus(user.id, user.status)}
+                          disabled={activeUserId === user.id}
+                          className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors disabled:opacity-50"
+                          title={user.status === "active" ? "Suspend User" : "Reactivate User"}
+                        >
                           <Ban size={16} />
                         </button>
                       </div>

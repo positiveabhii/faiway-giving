@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, Users, Ticket, Heart, ShieldCheck, BarChart3, LogOut, Menu, Loader2 } from "lucide-react";
+import { LayoutDashboard, Users, Ticket, Heart, ShieldCheck, BarChart3, LogOut, Menu } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -34,7 +34,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     router.push("/admin/login");
   };
 
-  const SidebarContent = () => (
+  const renderSidebarContent = () => (
     <div className="flex flex-col h-full bg-charcoal-950 border-r border-white/5 w-64">
       <div className="p-6 border-b border-white/5">
         <span className="text-xl font-heading font-bold text-white tracking-wide flex items-center space-x-2">
@@ -77,7 +77,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     <div className="min-h-screen bg-charcoal-900 flex text-sm selection:bg-gold-500/30">
       {/* Desktop Sidebar */}
       <div className="hidden md:block fixed inset-y-0 left-0 z-40 shadow-2xl">
-        <SidebarContent />
+        {renderSidebarContent()}
       </div>
 
       {/* Main Content */}
@@ -128,7 +128,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               transition={{ type: "spring", bounce: 0, duration: 0.3 }}
               className="fixed inset-y-0 left-0 z-50 w-64 md:hidden shadow-2xl"
             >
-              <SidebarContent />
+              {renderSidebarContent()}
             </motion.div>
           </>
         )}

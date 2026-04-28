@@ -7,10 +7,28 @@ import { ShieldAlert, Check, X, Image as ImageIcon, Loader2 } from "lucide-react
 export default function AdminVerificationsPage() {
   const { verifications, users, winnings, approveVerification, rejectVerification, isLoading } = useAppData();
   const [selectedProof, setSelectedProof] = useState<string | null>(null);
+  const [actionError, setActionError] = useState("");
+  const [activeActionId, setActiveActionId] = useState<string | null>(null);
 
   if (isLoading) return <div className="flex items-center justify-center h-64"><Loader2 className="animate-spin text-gold-400" size={32} /></div>;
 
   const pendingVerifs = verifications.filter(v => v.status === 'pending');
+
+  const runAction = async (id: string, action: "approve" | "reject") => {
+    setActionError("");
+    setActiveActionId(id);
+    try {
+      if (action === "approve") {
+        await approveVerification(id);
+      } else {
+        await rejectVerification(id);
+      }
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Verification update failed.");
+    } finally {
+      setActiveActionId(null);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -24,6 +42,7 @@ export default function AdminVerificationsPage() {
         </div>
 
         <div className="space-y-4">
+          {actionError && <div className="text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3 text-sm">{actionError}</div>}
           {pendingVerifs.length === 0 ? (
             <div className="text-center py-12 border border-white/5 border-dashed rounded-xl">
               <ShieldAlert className="text-gray-600 mx-auto mb-3" size={32} />
@@ -68,15 +87,17 @@ export default function AdminVerificationsPage() {
                   {/* Actions */}
                   <div className="w-full lg:w-auto flex lg:flex-col gap-2">
                     <button 
-                      onClick={() => approveVerification(v.id)}
-                      className="flex-1 lg:w-40 flex items-center justify-center space-x-2 bg-emerald-500 hover:bg-emerald-400 text-charcoal-950 py-2 rounded-lg text-sm font-bold transition-colors"
+                      onClick={() => runAction(v.id, "approve")}
+                      disabled={activeActionId === v.id}
+                      className="flex-1 lg:w-40 flex items-center justify-center space-x-2 bg-emerald-500 hover:bg-emerald-400 text-charcoal-950 py-2 rounded-lg text-sm font-bold transition-colors disabled:opacity-60"
                     >
                       <Check size={16} />
                       <span>Approve & Pay</span>
                     </button>
                     <button 
-                      onClick={() => rejectVerification(v.id)}
-                      className="flex-1 lg:w-40 flex items-center justify-center space-x-2 bg-charcoal-800 hover:bg-red-500/20 text-white hover:text-red-400 border border-white/5 hover:border-red-500/30 py-2 rounded-lg text-sm font-medium transition-colors"
+                      onClick={() => runAction(v.id, "reject")}
+                      disabled={activeActionId === v.id}
+                      className="flex-1 lg:w-40 flex items-center justify-center space-x-2 bg-charcoal-800 hover:bg-red-500/20 text-white hover:text-red-400 border border-white/5 hover:border-red-500/30 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-60"
                     >
                       <X size={16} />
                       <span>Reject</span>

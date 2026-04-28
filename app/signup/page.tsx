@@ -8,6 +8,7 @@ import { ArrowLeft, Check, ChevronRight, Loader2, RefreshCw } from "lucide-react
 import { useAuth } from "@/context/AuthContext";
 import { useAppData } from "@/context/AppDataContext";
 import { useRouter } from "next/navigation";
+import { signupSchema } from "@/lib/validations/auth";
 
 export default function SignupPage() {
   const { session, initialized, signup, loading, user: authUser } = useAuth();
@@ -45,10 +46,24 @@ export default function SignupPage() {
       setStep(step + 1);
     } else {
       try {
-        await signup({ email, password, first_name: firstName, last_name: lastName, plan, charity_id: charityId, contribution_percentage: parseInt(contribution) });
+        const parsed = signupSchema.safeParse({
+          email,
+          password,
+          first_name: firstName,
+          last_name: lastName,
+          plan,
+          charity_id: charityId,
+          contribution_percentage: parseInt(contribution, 10),
+        });
+        if (!parsed.success) {
+          setError(parsed.error.issues[0]?.message ?? "Please check your signup details.");
+          return;
+        }
+        const payload = parsed.data;
+        await signup(payload);
         router.push("/dashboard");
-      } catch (err: any) {
-        setError(err.message || "Signup failed. Please try again.");
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : "Signup failed. Please try again.");
       }
     }
   };

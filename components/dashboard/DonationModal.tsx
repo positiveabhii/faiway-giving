@@ -14,7 +14,7 @@ interface DonationModalProps {
   onSubmit: (amount: number) => Promise<void>;
 }
 
-export function DonationModal({ isOpen, onClose, charityName, charityId, onSubmit }: DonationModalProps) {
+export function DonationModal({ isOpen, onClose, charityName, onSubmit }: DonationModalProps) {
   const [amount, setAmount] = useState<string>("25");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -34,9 +34,9 @@ export function DonationModal({ isOpen, onClose, charityName, charityId, onSubmi
         setIsSuccess(false);
         onClose();
       }, 3000);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Donation failed:", err);
-      setError(err.message || "An unexpected error occurred during your donation.");
+      setError(err instanceof Error ? err.message : "An unexpected error occurred during your donation.");
     } finally {
       setIsSubmitting(false);
     }
@@ -69,7 +69,7 @@ export function DonationModal({ isOpen, onClose, charityName, charityId, onSubmi
                   <h3 className="text-2xl font-bold text-white mb-2">Thank You!</h3>
                   <p className="text-gray-400 leading-relaxed">
                     Your contribution to <span className="text-white font-medium">{charityName}</span> has been processed.
-                    Together, we're making an impact.
+                    Together, we&apos;re making an impact.
                   </p>
                 </div>
               ) : (
