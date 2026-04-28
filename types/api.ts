@@ -10,6 +10,7 @@ import type {
   Subscription,
   UserCharitySelection,
   WinnerVerification,
+  BillingTransaction,
 } from "@/types/database";
 import type { ApiErrorDetail, DrawMode } from "@/types/domain";
 import type { Session } from "@supabase/supabase-js";
@@ -55,6 +56,7 @@ export interface AppDataResponse {
   verifications: WinnerVerification[];
   notifications: Notification[];
   userCharitySelections: UserCharitySelection[];
+  charityDonations: CharityDonation[];
   users: Profile[];
   billingTransactions: BillingTransaction[];
 }
@@ -81,6 +83,7 @@ export interface CharitySelectionRequest {
 export interface DrawExecuteRequest {
   draw_id: string;
   mode: DrawMode;
+  lucky_numbers?: number[];
 }
 
 export interface DrawExecuteResponse {

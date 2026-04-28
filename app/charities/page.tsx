@@ -11,7 +11,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import type { Charity } from "@/types/database";
 
 export default function CharitiesPage() {
-  const { charities, isLoading } = useAppData();
+  const { charities, charityDonations, isLoading } = useAppData();
   const [search, setSearch] = useState("");
   const [selectedCharity, setSelectedCharity] = useState<Charity | null>(null);
 
@@ -72,7 +72,7 @@ export default function CharitiesPage() {
                     <div className="grid grid-cols-2 gap-4 mb-6">
                       <div className="bg-white/5 rounded-lg p-3 text-center">
                         <p className="text-xs text-gray-500 uppercase">Raised</p>
-                        <p className="text-emerald-400 font-medium">${charity.total_raised.toLocaleString()}</p>
+                        <p className="text-emerald-400 font-medium">${charityDonations.filter(d => d.charity_id === charity.id).reduce((sum, d) => sum + Number(d.amount), 0).toLocaleString()}</p>
                       </div>
                       <div className="bg-white/5 rounded-lg p-3 text-center">
                         <p className="text-xs text-gray-500 uppercase">Events</p>

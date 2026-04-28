@@ -1,9 +1,6 @@
-import { DrawResult, GolfScore } from "@/types";
+import { evaluateTickets, type TicketEntry } from "@/lib/utils/ticket-engine";
 
-export interface UserDrawEntry {
-  user_id: string;
-  scores: number[];
-}
+export type UserDrawEntry = TicketEntry;
 
 export interface SimulationResult {
   luckyNumbers: number[];
@@ -11,7 +8,9 @@ export interface SimulationResult {
     user_id: string;
     match_count: number;
     match_type: '5 Matches' | '4 Matches' | '3 Matches';
+    ticket: number[];
   }[];
+  entries: TicketEntry[];
 }
 
 export const generateLuckyNumbers = (mode: 'random' | 'algorithmic'): number[] => {
@@ -27,26 +26,10 @@ export const evaluateWinners = (
   luckyNumbers: number[],
   entries: UserDrawEntry[]
 ): SimulationResult['winners'] => {
-  const winners: SimulationResult['winners'] = [];
-  
-  entries.forEach(entry => {
-    // A user's numbers are their latest 5 scores
-    const matchCount = entry.scores.filter(s => luckyNumbers.includes(s)).length;
-    
-    if (matchCount === 5) {
-      winners.push({ user_id: entry.user_id, match_count: 5, match_type: '5 Matches' });
-    } else if (matchCount === 4) {
-      winners.push({ user_id: entry.user_id, match_count: 4, match_type: '4 Matches' });
-    } else if (matchCount === 3) {
-      winners.push({ user_id: entry.user_id, match_count: 3, match_type: '3 Matches' });
-    }
-  });
-  
-  return winners;
+  return evaluateTickets(luckyNumbers, entries).winners;
 };
 
 export const runDrawSimulation = (entries: UserDrawEntry[], mode: 'random' | 'algorithmic' = 'random'): SimulationResult => {
   const luckyNumbers = generateLuckyNumbers(mode);
-  const winners = evaluateWinners(luckyNumbers, entries);
-  return { luckyNumbers, winners };
+  return evaluateTickets(luckyNumbers, entries);
 };

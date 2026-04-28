@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Button } from "@/components/ui/Button";
 import { Heart, Edit2, TrendingUp, DollarSign, Loader2 } from "lucide-react";
@@ -11,7 +11,7 @@ import { DonationModal } from "@/components/dashboard/DonationModal";
 
 export default function MyCharityPage() {
   const { user } = useAuth();
-  const { charities, userCharitySelections, updateCharityContribution, submitDonation, isLoading } = useAppData();
+  const { charities, userCharitySelections, charityDonations, updateCharityContribution, submitDonation, isLoading } = useAppData();
   const [isEditing, setIsEditing] = useState(false);
   const [isDonating, setIsDonating] = useState(false);
   const [success, setSuccess] = useState("");
@@ -21,6 +21,26 @@ export default function MyCharityPage() {
   const userSelection = userCharitySelections.find(s => s.user_id === user?.id);
   const selectedCharity = userSelection ? charities.find(c => c.id === userSelection.charity_id) : null;
   const [contribution, setContribution] = useState(userSelection?.contribution_percentage ?? 10);
+
+  // Real Data Aggregations
+  const myDonations = charityDonations.filter(d => d.user_id === user?.id);
+  const totalLifetimeDonated = myDonations.reduce((sum, d) => sum + Number(d.amount), 0);
+  
+  const monthlyHistory = useMemo(() => {
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const history = Array(12).fill(0).map((_, i) => ({ month: months[i], amount: 0 }));
+    
+    myDonations.forEach(d => {
+      const date = new Date(d.created_at);
+      history[date.getMonth()].amount += Number(d.amount);
+    });
+    
+    // Return last 6 months for the chart
+    const currentMonth = new Date().getMonth();
+    return history.slice(Math.max(0, currentMonth - 5), currentMonth + 1);
+  }, [myDonations]);
+
+  const maxDonation = Math.max(...monthlyHistory.map(h => h.amount), 10);
 
   if (isLoading || !user) return <div className="flex items-center justify-center h-64"><Loader2 className="animate-spin text-gold-400" size={32} /></div>;
 
@@ -74,8 +94,8 @@ export default function MyCharityPage() {
           <p className="text-gray-400">Together, we are making a difference in the world.</p>
         </div>
         <div className="relative z-10 text-center md:text-right">
-          <p className="text-emerald-400 uppercase tracking-widest text-sm font-bold mb-1">Total Raised</p>
-          <p className="text-5xl font-bold text-white">${selectedCharity.total_raised.toLocaleString()}</p>
+          <p className="text-emerald-400 uppercase tracking-widest text-sm font-bold mb-1">Your Lifetime Contribution</p>
+          <p className="text-5xl font-bold text-white">${totalLifetimeDonated.toLocaleString()}</p>
         </div>
       </GlassCard>
 
@@ -97,26 +117,38 @@ export default function MyCharityPage() {
               <p className="text-gray-400 text-sm leading-relaxed mb-6">{selectedCharity.mission}</p>
               <div className="bg-charcoal-900/50 rounded-xl p-4 border border-white/5">
                 <p className="text-xs text-gray-500 mb-1">Platform Total Raised for this Charity</p>
-                <p className="text-emerald-400 font-bold text-xl">${selectedCharity.total_raised.toLocaleString()}</p>
+                <p className="text-emerald-400 font-bold text-xl">${charityDonations.filter(d => d.charity_id === selectedCharity.id).reduce((sum, d) => sum + Number(d.amount), 0).toLocaleString()}</p>
               </div>
             </div>
           </GlassCard>
 
           <GlassCard className="p-8 border-white/5">
             <div className="flex justify-between items-center mb-8">
-              <h3 className="text-xl font-bold text-white">Donation Trajectory</h3>
-              <div className="flex items-center space-x-2 text-emerald-400 text-sm font-medium bg-emerald-500/10 px-3 py-1 rounded-full"><TrendingUp size={16} /><span>+12.4% this year</span></div>
+              <h3 className="text-xl font-bold text-white">Donation History</h3>
+              <div className="flex items-center space-x-2 text-emerald-400 text-sm font-medium bg-emerald-500/10 px-3 py-1 rounded-full"><TrendingUp size={16} /><span>Real-time tracking</span></div>
             </div>
-            <div className="h-48 border-b border-l border-white/10 relative flex items-end justify-between px-2 pb-2">
-              {[40, 65, 45, 80, 55, 90, 70, 100].map((height, i) => (
-                <div key={i} className="w-[8%] bg-emerald-500/20 hover:bg-emerald-500/40 border border-emerald-500/30 rounded-t-sm transition-colors relative group" style={{ height: `${height}%` }}>
-                  <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-charcoal-800 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity">${height * 15}</div>
+            
+            {myDonations.length > 0 ? (
+              <>
+                <div className="h-48 border-b border-l border-white/10 relative flex items-end justify-between px-2 pb-2">
+                  {monthlyHistory.map((hist, i) => {
+                    const height = (hist.amount / maxDonation) * 100;
+                    return (
+                      <div key={i} className="w-[12%] bg-emerald-500/20 hover:bg-emerald-500/40 border border-emerald-500/30 rounded-t-sm transition-colors relative group" style={{ height: `${Math.max(height, 5)}%` }}>
+                        <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-charcoal-800 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity">${hist.amount.toLocaleString()}</div>
+                      </div>
+                    );
+                  })}
                 </div>
-              ))}
-            </div>
-            <div className="flex justify-between text-xs text-gray-500 mt-2 px-2">
-              <span>Jan</span><span>Feb</span><span>Mar</span><span>Apr</span><span>May</span><span>Jun</span><span>Jul</span><span>Aug</span>
-            </div>
+                <div className="flex justify-between text-xs text-gray-500 mt-2 px-2">
+                  {monthlyHistory.map((h, i) => <span key={i}>{h.month}</span>)}
+                </div>
+              </>
+            ) : (
+              <div className="py-12 text-center">
+                <p className="text-gray-500 text-sm italic">No donation history available yet. Win draws to start making an impact!</p>
+              </div>
+            )}
           </GlassCard>
         </div>
 

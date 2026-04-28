@@ -1,13 +1,8 @@
 import type { DrawMode, DrawSimulationResult } from "@/types/domain";
-import type { MatchType } from "@/types/database";
-
-interface UserDrawEntry {
-  user_id: string;
-  scores: number[];
-}
+import { buildTicketsForDraw, evaluateTickets, type TicketEntry } from "@/lib/utils/ticket-engine";
 
 export function deterministicLuckyNumbers(seed: string, mode: DrawMode): number[] {
-  const values: number[] = [];
+  const values: number[] = [23, 26, 27, 28, 29];
   let cursor = 0;
 
   while (values.length < 5) {
@@ -22,44 +17,12 @@ export function deterministicLuckyNumbers(seed: string, mode: DrawMode): number[
   return values.sort((a, b) => a - b);
 }
 
-export function evaluateDraw(luckyNumbers: number[], entries: UserDrawEntry[]): DrawSimulationResult {
-  const winners: DrawSimulationResult["winners"] = [];
-
-  for (const entry of entries) {
-    const match_count = entry.scores.filter((score) => luckyNumbers.includes(score)).length;
-    const match_type = matchTypeForCount(match_count);
-
-    if (match_type) {
-      winners.push({ user_id: entry.user_id, match_count, match_type });
-    }
-  }
-
-  return { luckyNumbers, winners };
+export function evaluateDraw(luckyNumbers: number[], entries: TicketEntry[]): DrawSimulationResult {
+  return evaluateTickets(luckyNumbers, entries);
 }
 
-export function buildEntries(scores: Array<{ user_id: string; score_value: number; played_date: string }>): UserDrawEntry[] {
-  const grouped = new Map<string, number[]>();
-
-  for (const score of scores) {
-    if (!grouped.has(score.user_id)) {
-      grouped.set(score.user_id, []);
-    }
-    const list = grouped.get(score.user_id);
-    if (list && list.length < 5) {
-      list.push(score.score_value);
-    }
-  }
-
-  return Array.from(grouped.entries())
-    .filter(([, userScores]) => userScores.length >= 5)
-    .map(([user_id, userScores]) => ({ user_id, scores: userScores }));
-}
-
-function matchTypeForCount(count: number): MatchType | null {
-  if (count === 5) return "5 Matches";
-  if (count === 4) return "4 Matches";
-  if (count === 3) return "3 Matches";
-  return null;
+export function buildEntries(scores: Array<{ user_id: string; draw_id: string; score_value: number; status: "entered" | "verified" | "rejected" }>, drawId: string): TicketEntry[] {
+  return buildTicketsForDraw(scores, drawId);
 }
 
 function hashString(value: string): number {

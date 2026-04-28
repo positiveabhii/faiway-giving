@@ -9,8 +9,7 @@ import * as charitySelectionApi from "@/lib/api/charity-selection";
 import * as drawApi from "@/lib/api/draw";
 import * as winnerApi from "@/lib/api/winners";
 import * as notificationApi from "@/lib/api/notifications";
-import { runDrawSimulation, UserDrawEntry } from "@/lib/utils/draw-engine";
-import type { Profile, Subscription, Charity, UserCharitySelection, GolfScore, DrawResult, PrizePool, DrawWinner, WinnerVerification, Notification, BillingTransaction } from "@/types/database";
+import type { Profile, Subscription, Charity, UserCharitySelection, CharityDonation, GolfScore, DrawResult, PrizePool, DrawWinner, WinnerVerification, Notification, BillingTransaction } from "@/types/database";
 import type { DrawMode, DrawSimulationResult } from "@/types/domain";
 
 interface AppDataContextType {
@@ -23,6 +22,7 @@ interface AppDataContextType {
   verifications: WinnerVerification[];
   notifications: Notification[];
   userCharitySelections: UserCharitySelection[];
+  charityDonations: CharityDonation[];
   users: Profile[];
   billingTransactions: BillingTransaction[];
   isLoading: boolean;
@@ -36,7 +36,7 @@ interface AppDataContextType {
   submitProof: (winnerId: string, file: File) => Promise<void>;
   approveVerification: (id: string) => Promise<void>;
   rejectVerification: (id: string) => Promise<void>;
-  simulateDraw: (drawId: string, mode: DrawMode) => DrawSimulationResult;
+  simulateDraw: (drawId: string, mode: DrawMode, luckyNumbers?: number[]) => Promise<DrawSimulationResult>;
   publishDraw: (drawId: string, result: DrawSimulationResult, mode?: DrawMode) => Promise<void>;
 }
 
@@ -44,7 +44,7 @@ const AppDataContext = createContext<AppDataContextType | undefined>(undefined);
 
 export function AppDataProvider({ children }: { children: React.ReactNode }) {
   const { session, initialized } = useAuth();
-  
+
   const [charities, setCharities] = useState<Charity[]>([]);
   const [scores, setScores] = useState<GolfScore[]>([]);
   const [draws, setDraws] = useState<DrawResult[]>([]);
@@ -54,9 +54,10 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
   const [verifications, setVerifications] = useState<WinnerVerification[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [userCharitySelections, setUserCharitySelections] = useState<UserCharitySelection[]>([]);
+  const [charityDonations, setCharityDonations] = useState<CharityDonation[]>([]);
   const [users, setUsers] = useState<Profile[]>([]);
   const [billingTransactions, setBillingTransactions] = useState<BillingTransaction[]>([]);
-  
+
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -78,6 +79,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
       setNotifications(data.notifications);
       setUsers(data.users);
       setVerifications(data.verifications);
+      setCharityDonations(data.charityDonations);
       setUserCharitySelections(data.userCharitySelections);
       setBillingTransactions(data.billingTransactions);
     } catch (err) {
@@ -147,17 +149,12 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
     await fetchData();
   };
 
-  const simulateDraw = useCallback((drawId: string, mode: DrawMode): DrawSimulationResult => {
-    const entriesMap = new Map<string, number[]>();
-    scores.forEach((s) => {
-      if (!entriesMap.has(s.user_id)) entriesMap.set(s.user_id, []);
-      entriesMap.get(s.user_id)!.push(s.score_value);
+  const simulateDraw = useCallback((drawId: string, mode: DrawMode, luckyNumbers?: number[]) => {
+    return drawApi.simulateDraw({
+      draw_id: drawId, mode, lucky_numbers:
+        luckyNumbers
     });
-    const entries: UserDrawEntry[] = Array.from(entriesMap.entries())
-      .filter(([, userScores]) => userScores.length >= 5)
-      .map(([user_id, userScores]) => ({ user_id, scores: userScores.slice(0, 5) }));
-    return runDrawSimulation(entries, mode);
-  }, [scores]);
+  }, []);
 
   const publishDraw = async (drawId: string, _result: DrawSimulationResult, mode: DrawMode = "random") => {
     if (!userId) return;
@@ -167,7 +164,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AppDataContext.Provider value={{
-      charities, scores, draws, prizePools, subscriptions, winnings, verifications, notifications, userCharitySelections, users, billingTransactions,
+      charities, scores, draws, prizePools, subscriptions, winnings, verifications, notifications, userCharitySelections, charityDonations, users, billingTransactions,
       isLoading, error, refreshAll, submitScore, removeScore, updateCharityContribution, submitDonation, markNotificationRead,
       submitProof, approveVerification, rejectVerification, simulateDraw, publishDraw
     }}>

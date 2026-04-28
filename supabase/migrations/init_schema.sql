@@ -207,9 +207,9 @@ create policy "winners_insert" on draw_winners for insert to authenticated with 
 create policy "winners_update" on draw_winners for update to authenticated using (auth.uid() = user_id or (select role from profiles where id = auth.uid()) = 'admin');
 
 -- winner_verifications
-create policy "verif_select" on winner_verifications for select to authenticated using (true);
+create policy "verif_select" on winner_verifications for select to authenticated using (auth.uid() = user_id or (select role from profiles where id = auth.uid()) = 'admin');
 create policy "verif_insert" on winner_verifications for insert to authenticated with check (auth.uid() = user_id or (select role from profiles where id = auth.uid()) = 'admin');
-create policy "verif_update" on winner_verifications for update to authenticated using ((select role from profiles where id = auth.uid()) = 'admin');
+create policy "verif_update" on winner_verifications for update to authenticated using (auth.uid() = user_id or (select role from profiles where id = auth.uid()) = 'admin');
 
 -- notifications
 create policy "notif_select" on notifications for select to authenticated using (auth.uid() = user_id);

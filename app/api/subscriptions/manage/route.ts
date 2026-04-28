@@ -1,11 +1,15 @@
 import { jsonError, jsonOk, parseJson, requireAuth } from "@/lib/server/api";
 import { subscriptionManageSchema } from "@/lib/validations/subscription";
+import { getSupabaseServiceRoleClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
 export async function PATCH(request: Request) {
   const auth = await requireAuth();
   if ("response" in auth) return auth.response;
+
+  const writer = getSupabaseServiceRoleClient();
+  if (!writer) return jsonError("Server configuration error: Service role client unavailable.", 500);
 
   const body = await parseJson(request, subscriptionManageSchema);
   if (body instanceof Response) return body;
@@ -15,7 +19,7 @@ export async function PATCH(request: Request) {
     return jsonError("Admin access is required to manage another user's subscription.", 403);
   }
 
-  const updates: { plan?: "monthly" | "yearly"; status?: "active" | "canceled" | "past_due"; next_renewal_date?: string } = {};
+  const updates: { plan?: "monthly" | "yearly"; status?: "active" | "canceled" | "past_due" | "pending_payment"; next_renewal_date?: string | null } = {};
 
   if (body.plan) {
     updates.plan = body.plan;
@@ -25,10 +29,10 @@ export async function PATCH(request: Request) {
   }
 
   if (body.status) {
-    updates.status = body.status;
+    updates.status = body.status as any;
   }
 
-  const { data, error } = await auth.supabase
+  const { data, error } = await writer
     .from("subscriptions")
     .update(updates)
     .eq("user_id", targetUserId)

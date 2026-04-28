@@ -222,7 +222,7 @@ export default function ProfilePage() {
                   <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center space-x-3 text-red-400">
                     <AlertCircle size={20} />
                     <p className="text-sm font-medium">
-                      {userSub.status === 'pending_payment' 
+                      {userSub.status === 'pending_payment'
                         ? "Your registration is incomplete. Please finish your payment to join the community."
                         : "Your membership has lapsed. Complete payment to restore access."}
                     </p>
@@ -248,7 +248,7 @@ export default function ProfilePage() {
                     </Button>
                   ) : (
                     <>
-                      <Button variant="secondary" size="sm" onClick={() => window.alert("Invoice management is handled via the Transactions table below.")}>Invoices</Button>
+                      {/* <Button variant="secondary" size="sm" onClick={() => window.alert("Invoice management is handled via the Transactions table below.")}>Invoices</Button> */}
                       <Button variant="ghost" size="sm" className="text-red-400 hover:text-red-300 hover:bg-red-500/10" onClick={handleCancel}>Cancel Membership</Button>
                     </>
                   )}

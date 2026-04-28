@@ -14,7 +14,7 @@ import { useRouter } from "next/navigation";
 
 export default function LandingPage() {
   const { session, initialized, user } = useAuth();
-  const { draws, users, charities, isLoading: dataLoading } = useAppData();
+  const { draws, users, charities, charityDonations, isLoading: dataLoading } = useAppData();
   const router = useRouter();
   const [introComplete, setIntroComplete] = useState(false);
 
@@ -27,7 +27,7 @@ export default function LandingPage() {
   const landingStats = useMemo(() => {
     const totalJackpot = draws.reduce((sum, d) => sum + d.total_jackpot, 0);
     const subscriberCount = users.filter(u => u.role === 'subscriber').length;
-    const totalDonated = charities.reduce((sum, c) => sum + Number(c.total_raised), 0);
+    const totalDonated = charityDonations.reduce((sum, d) => sum + Number(d.amount), 0);
     const nextDraw = draws.find(d => d.status === "upcoming");
 
     return [
@@ -36,7 +36,7 @@ export default function LandingPage() {
       { label: "Donated", value: totalDonated > 0 ? `$${(totalDonated / 1000).toFixed(0)}k+` : "$0k", icon: Heart },
       { label: "Next Draw", value: nextDraw ? nextDraw.month_name : "TBD", icon: Calendar }
     ];
-  }, [draws, users, charities]);
+  }, [draws, users, charityDonations]);
 
   if (!initialized) {
     return (

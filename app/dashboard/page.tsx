@@ -24,7 +24,7 @@ function DashboardSkeleton() {
 
 export default function DashboardHome() {
   const { user } = useAuth();
-  const { draws, subscriptions, winnings, charities, userCharitySelections, scores, isLoading } = useAppData();
+  const { draws, subscriptions, winnings, charities, userCharitySelections, scores, charityDonations, isLoading } = useAppData();
 
   // Root authentication check - this is the only hard block
   if (!user) {
@@ -42,6 +42,12 @@ export default function DashboardHome() {
   const selectedCharity = userSelection ? charities.find(c => c.id === userSelection.charity_id) : null;
   const totalWon = winnings.filter(w => w.user_id === user.id).reduce((sum, w) => sum + Number(w.prize_amount), 0);
   const totalEntries = scores.length;
+
+  const getBalance = () => {
+    const totalWinnings = winnings.filter(w => w.user_id === user.id).reduce((sum, w) => sum + Number(w.prize_amount), 0);
+    const totalDonations = charityDonations.filter(d => d.user_id === user.id).reduce((sum, d) => sum + Number(d.amount), 0);
+    return totalWinnings - totalDonations;
+  }
 
   return (
     <div className="space-y-8">
@@ -61,6 +67,10 @@ export default function DashboardHome() {
               <div>
                 <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Total Winnings</p>
                 <p className="text-3xl font-bold text-emerald-400">${totalWon.toLocaleString()}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Current Balance</p>
+                <p className="text-3xl font-bold text-emerald-400">${(getBalance()).toLocaleString()}</p>
               </div>
             </div>
           </div>
@@ -109,7 +119,7 @@ export default function DashboardHome() {
                 <p className="text-emerald-400 font-medium text-sm px-2 py-0.5 bg-emerald-500/10 rounded-full inline-block capitalize">{userSub?.status ?? "N/A"}</p>
               </div>
             </div>
-            <p className="text-sm text-gray-400">Renews on {userSub ? new Date(userSub.next_renewal_date).toLocaleDateString() : "—"}</p>
+            <p className="text-sm text-gray-400">Renews on {userSub && userSub.next_renewal_date ? new Date(userSub.next_renewal_date).toLocaleDateString() : "—"}</p>
           </>
         </GlassCard>
 
@@ -129,7 +139,7 @@ export default function DashboardHome() {
                 <img src={selectedCharity.image_url} alt={selectedCharity.name} className="w-16 h-16 rounded-lg object-cover" />
                 <div>
                   <p className="text-white font-medium">{selectedCharity.name}</p>
-                  <p className="text-sm text-gray-400">Total Raised: <span className="text-emerald-400 font-medium">${selectedCharity.total_raised.toLocaleString()}</span></p>
+                  <p className="text-sm text-gray-400">Platform Total Raised: <span className="text-emerald-400 font-medium">${charityDonations.filter(d => d.charity_id === selectedCharity.id).reduce((sum, d) => sum + Number(d.amount), 0).toLocaleString()}</span></p>
                 </div>
               </div>
               <div className="bg-charcoal-900/50 rounded-xl p-4 border border-white/5 flex justify-between items-center">

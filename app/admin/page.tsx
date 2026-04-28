@@ -6,12 +6,12 @@ import { Users, DollarSign, Heart, ShieldAlert, TrendingUp, Loader2 } from "luci
 import Link from "next/link";
 
 export default function AdminDashboardHome() {
-  const { users, prizePools, charities, verifications, subscriptions, isLoading } = useAppData();
+  const { users, prizePools, verifications, charityDonations, billingTransactions, isLoading } = useAppData();
 
   // 1. Core KPIs
-  const subscriberCount = useMemo(() => users.filter(u => u.role === 'subscriber').length, [users]);
-  const activePrizePoolTotal = useMemo(() => prizePools.reduce((sum, p) => sum + p.total_amount, 0), [prizePools]);
-  const totalCharityDisbursed = useMemo(() => charities.reduce((sum, c) => sum + Number(c.total_raised), 0), [charities]);
+  const subscriberCount = useMemo(() => users.filter(u => u.role === 'subscriber' && u?.status === 'active').length, [users]);
+  const activePrizePoolTotal = useMemo(() => prizePools[0]?.total_amount || 0, [prizePools]);
+  const totalCharityDisbursed = useMemo(() => charityDonations.reduce((sum, d) => sum + Number(d.amount), 0), [charityDonations]);
   const pendingVerificationsCount = useMemo(() => verifications.filter(v => v.status === 'pending').length, [verifications]);
 
   // 2. Trend Calculations (Last 6 Months)
@@ -19,7 +19,7 @@ export default function AdminDashboardHome() {
     const now = new Date();
     const months = [];
     const subscribersTrend = [];
-    const revenueTrend = []; // Simplified as sum of subscriptions created in that month
+    const revenueTrend = [];
 
     for (let i = 5; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
@@ -33,12 +33,11 @@ export default function AdminDashboardHome() {
       }).length;
       subscribersTrend.push(newSubs);
 
-      // Revenue approximation (assuming $29 per sub for monthly, $290 for yearly at time of signup)
-      // This is a rough truth-based estimate based on created_at
-      const monthRev = subscriptions.reduce((sum, s) => {
-        const cAt = new Date(s.created_at);
-        if (cAt.getMonth() === d.getMonth() && cAt.getFullYear() === d.getFullYear()) {
-          return sum + (s.plan === 'yearly' ? 290 : 29);
+      // Real Revenue from billing transactions
+      const monthRev = billingTransactions.reduce((sum, t) => {
+        const bAt = new Date(t.billing_date);
+        if (bAt.getMonth() === d.getMonth() && bAt.getFullYear() === d.getFullYear()) {
+          return sum + Number(t.amount);
         }
         return sum;
       }, 0);
@@ -46,7 +45,7 @@ export default function AdminDashboardHome() {
     }
 
     return { months, subscribersTrend, revenueTrend };
-  }, [users, subscriptions]);
+  }, [users, billingTransactions]);
 
   const maxRevenue = Math.max(...chartData.revenueTrend, 100);
 
@@ -67,7 +66,7 @@ export default function AdminDashboardHome() {
 
   return (
     <div className="space-y-6">
-      
+
       {/* Top Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat, i) => {
@@ -87,14 +86,14 @@ export default function AdminDashboardHome() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
+
         {/* Real Data Trend Chart */}
         <div className="lg:col-span-2 bg-charcoal-900 border border-white/5 rounded-xl p-6">
           <div className="flex justify-between items-center mb-8">
             <h3 className="text-lg font-bold text-white">Monthly Revenue Inflow</h3>
             <div className="text-xs text-gray-500 bg-white/5 px-2 py-1 rounded">Last 6 Months (Live)</div>
           </div>
-          
+
           <div className="h-64 flex items-end justify-between px-2 pb-6 border-b border-white/5 relative">
             {chartData.revenueTrend.every(v => v === 0) ? (
               <div className="absolute inset-0 flex items-center justify-center text-gray-600 text-sm italic">
@@ -104,10 +103,10 @@ export default function AdminDashboardHome() {
               <>
                 <div className="absolute left-0 top-0 bottom-6 flex flex-col justify-between text-[10px] text-gray-600">
                   <span>${maxRevenue.toLocaleString()}</span>
-                  <span>${(maxRevenue/2).toLocaleString()}</span>
+                  <span>${(maxRevenue / 2).toLocaleString()}</span>
                   <span>$0</span>
                 </div>
-                
+
                 <div className="w-full pl-12 h-full flex items-end justify-between">
                   {chartData.revenueTrend.map((val, i) => {
                     const height = (val / maxRevenue) * 100;
@@ -136,7 +135,7 @@ export default function AdminDashboardHome() {
               {pendingVerificationsCount} Pending
             </span>
           </div>
-          
+
           <div className="flex-1 space-y-4 overflow-y-auto pr-2 custom-scrollbar">
             {verifications.filter(v => v.status === 'pending').map(v => {
               const winnerUser = users.find(u => u.id === v.user_id);

@@ -32,7 +32,7 @@ export default function AdminVerificationsPage() {
 
   return (
     <div className="space-y-6">
-      
+
       <div className="bg-charcoal-900 border border-white/5 rounded-xl p-6">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
           <div className="flex items-center space-x-3">
@@ -54,7 +54,7 @@ export default function AdminVerificationsPage() {
               const win = winnings.find(w => w.id === v.winner_id);
               return (
                 <div key={v.id} className="bg-charcoal-950 border border-white/5 rounded-xl p-6 flex flex-col lg:flex-row gap-6 items-start lg:items-center justify-between">
-                  
+
                   {/* User & Win Info */}
                   <div className="flex-1">
                     <div className="flex items-center space-x-3 mb-2">
@@ -75,8 +75,11 @@ export default function AdminVerificationsPage() {
 
                   {/* Proof Preview Button */}
                   <div className="w-full lg:w-auto">
-                    <button 
-                      onClick={() => setSelectedProof(win?.proof_url || null)}
+                    <button
+                      onClick={() => {
+                        console.log(win, "erfwer")
+                        setSelectedProof(win?.proof_url || null)
+                      }}
                       className="w-full lg:w-48 h-20 rounded-lg border border-white/10 bg-charcoal-900 hover:bg-white/5 flex flex-col items-center justify-center transition-colors group"
                     >
                       <ImageIcon size={20} className="text-gray-500 group-hover:text-gold-400 mb-1 transition-colors" />
@@ -86,7 +89,7 @@ export default function AdminVerificationsPage() {
 
                   {/* Actions */}
                   <div className="w-full lg:w-auto flex lg:flex-col gap-2">
-                    <button 
+                    <button
                       onClick={() => runAction(v.id, "approve")}
                       disabled={activeActionId === v.id}
                       className="flex-1 lg:w-40 flex items-center justify-center space-x-2 bg-emerald-500 hover:bg-emerald-400 text-charcoal-950 py-2 rounded-lg text-sm font-bold transition-colors disabled:opacity-60"
@@ -94,7 +97,7 @@ export default function AdminVerificationsPage() {
                       <Check size={16} />
                       <span>Approve & Pay</span>
                     </button>
-                    <button 
+                    <button
                       onClick={() => runAction(v.id, "reject")}
                       disabled={activeActionId === v.id}
                       className="flex-1 lg:w-40 flex items-center justify-center space-x-2 bg-charcoal-800 hover:bg-red-500/20 text-white hover:text-red-400 border border-white/5 hover:border-red-500/30 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-60"

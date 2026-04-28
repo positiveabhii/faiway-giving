@@ -8,7 +8,7 @@ import type { Charity } from "@/types/database";
 import type { CharityWriteRequest } from "@/types/api";
 
 export default function AdminCharitiesPage() {
-  const { charities, refreshAll, isLoading } = useAppData();
+  const { charities, charityDonations, refreshAll, isLoading } = useAppData();
   const [isEditing, setIsEditing] = useState(false);
   const [currentEdit, setCurrentEdit] = useState<CharityWriteRequest | (CharityWriteRequest & { id: string }) | null>(null);
   const [search, setSearch] = useState("");
@@ -18,6 +18,14 @@ export default function AdminCharitiesPage() {
   if (isLoading) return <div className="flex items-center justify-center h-64"><Loader2 className="animate-spin text-gold-400" size={32} /></div>;
 
   const filteredCharities = charities.filter(c => c.name.toLowerCase().includes(search.toLowerCase()));
+
+  const getCharityStats = (id: string) => {
+    const donations = charityDonations.filter(d => d.charity_id === id);
+    return {
+      total: donations.reduce((sum, d) => sum + Number(d.amount), 0),
+      count: donations.length
+    };
+  };
 
   const handleEdit = (charity: Charity) => {
     setCurrentEdit(charity);
@@ -32,7 +40,6 @@ export default function AdminCharitiesPage() {
       image_url: "",
       tags: [],
       is_spotlight: false,
-      total_raised: 0,
       upcoming_events: 0
     });
     setIsEditing(true);
@@ -103,41 +110,44 @@ export default function AdminCharitiesPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredCharities.map((charity) => (
-              <div key={charity.id} className="bg-charcoal-950 border border-white/5 rounded-xl overflow-hidden flex flex-col group relative">
-                {charity.is_spotlight && (
-                  <div className="absolute top-2 right-2 bg-gold-500 text-charcoal-950 text-xs font-bold px-2 py-1 rounded z-10 flex items-center space-x-1 shadow-lg">
-                    <Star size={12} fill="currentColor" />
-                    <span>Spotlight</span>
-                  </div>
-                )}
-                
-                <div className="h-40 relative">
-                  <img src={charity.image_url} alt={charity.name} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-charcoal-950 to-transparent"></div>
-                </div>
-                
-                <div className="p-5 flex-1 flex flex-col">
-                  <h3 className="text-white font-bold text-lg mb-1">{charity.name}</h3>
-                  <p className="text-gray-400 text-xs line-clamp-2 mb-4">{charity.mission}</p>
+            {filteredCharities.map((charity) => {
+              const stats = getCharityStats(charity.id);
+              return (
+                <div key={charity.id} className="bg-charcoal-950 border border-white/5 rounded-xl overflow-hidden flex flex-col group relative">
+                  {charity.is_spotlight && (
+                    <div className="absolute top-2 right-2 bg-gold-500 text-charcoal-950 text-xs font-bold px-2 py-1 rounded z-10 flex items-center space-x-1 shadow-lg">
+                      <Star size={12} fill="currentColor" />
+                      <span>Spotlight</span>
+                    </div>
+                  )}
                   
-                  <div className="mt-auto flex justify-between items-end border-t border-white/5 pt-4">
-                    <div>
-                      <p className="text-xs text-gray-500">Total Disbursed</p>
-                      <p className="text-emerald-400 font-bold">${charity.total_raised.toLocaleString()}</p>
-                    </div>
-                    <div className="flex space-x-2">
-                      <button onClick={() => handleEdit(charity)} className="w-8 h-8 rounded bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 flex items-center justify-center transition-colors">
-                        <Edit2 size={14} />
-                      </button>
-                      <button onClick={() => handleDelete(charity.id)} className="w-8 h-8 rounded bg-white/5 text-gray-400 hover:text-red-400 hover:bg-red-500/10 flex items-center justify-center transition-colors">
-                        <Trash2 size={14} />
-                      </button>
+                  <div className="h-40 relative">
+                    <img src={charity.image_url} alt={charity.name} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-charcoal-950 to-transparent"></div>
+                  </div>
+                  
+                  <div className="p-5 flex-1 flex flex-col">
+                    <h3 className="text-white font-bold text-lg mb-1">{charity.name}</h3>
+                    <p className="text-gray-400 text-xs line-clamp-2 mb-4">{charity.mission}</p>
+                    
+                    <div className="mt-auto flex justify-between items-end border-t border-white/5 pt-4">
+                      <div>
+                        <p className="text-xs text-gray-500">Total Disbursed</p>
+                        <p className="text-emerald-400 font-bold">${stats.total.toLocaleString()}</p>
+                      </div>
+                      <div className="flex space-x-2">
+                        <button onClick={() => handleEdit(charity)} className="w-8 h-8 rounded bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 flex items-center justify-center transition-colors">
+                          <Edit2 size={14} />
+                        </button>
+                        <button onClick={() => handleDelete(charity.id)} className="w-8 h-8 rounded bg-white/5 text-gray-400 hover:text-red-400 hover:bg-red-500/10 flex items-center justify-center transition-colors">
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       ) : (

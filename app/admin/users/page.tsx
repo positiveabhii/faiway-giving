@@ -59,15 +59,18 @@ export default function AdminUsersPage() {
               <tr>
                 <th className="px-6 py-4 font-medium uppercase tracking-wider text-xs">User</th>
                 <th className="px-6 py-4 font-medium uppercase tracking-wider text-xs">Plan</th>
+                <th className="px-6 py-4 font-medium uppercase tracking-wider text-xs text-center">Scores</th>
+                <th className="px-6 py-4 font-medium uppercase tracking-wider text-xs text-center">Wins</th>
+                <th className="px-6 py-4 font-medium uppercase tracking-wider text-xs">Charity</th>
                 <th className="px-6 py-4 font-medium uppercase tracking-wider text-xs">Status</th>
                 <th className="px-6 py-4 font-medium uppercase tracking-wider text-xs text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
-              {filteredUsers.map((user) => {
-                const sub = subscriptions.find(s => s.user_id === user.id);
+              {filteredUsers.map((user: any) => {
+                const sub = user.subscription;
                 return (
-                  <tr key={user.id} className="hover:bg-white/5 transition-colors">
+                  <tr key={user.id} className="hover:bg-white/5 transition-colors text-xs">
                     <td className="px-6 py-4">
                       <div className="flex items-center space-x-3">
                         <div className="w-8 h-8 rounded-full bg-charcoal-800 flex items-center justify-center text-gray-400 font-bold text-xs overflow-hidden">
@@ -75,31 +78,41 @@ export default function AdminUsersPage() {
                         </div>
                         <div>
                           <p className="text-white font-medium">{user.first_name} {user.last_name}</p>
-                          <p className="text-gray-500 text-xs">{user.email}</p>
+                          <p className="text-gray-500 text-[10px]">{user.email}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-gray-300 capitalize">{sub?.plan || 'None'}</td>
                     <td className="px-6 py-4">
-                      <span className={`px-2 py-1 text-xs font-bold rounded capitalize ${user.status === 'active' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
+                      {sub ? (
+                        <div className="flex flex-col">
+                          <span className="text-gray-300 capitalize">{sub.plan}</span>
+                          <span className={`text-[10px] ${sub.status === 'active' ? 'text-emerald-500' : 'text-amber-500'}`}>{sub.status}</span>
+                        </div>
+                      ) : <span className="text-gray-500">None</span>}
+                    </td>
+                    <td className="px-6 py-4 text-center text-white font-medium">{user.total_scores}</td>
+                    <td className="px-6 py-4 text-center text-gold-400 font-medium">{user.total_wins}</td>
+                    <td className="px-6 py-4 text-gray-300 truncate max-w-[120px]" title={user.selected_charity}>{user.selected_charity}</td>
+                    <td className="px-6 py-4">
+                      <span className={`px-2 py-0.5 text-[10px] font-bold rounded capitalize ${user.status === 'active' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
                         {user.status}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <div className="flex justify-end space-x-2">
-                        <button className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors" title="Inspect Scores">
-                          <FileText size={16} />
+                      <div className="flex justify-end space-x-1">
+                        <button className="p-1.5 text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors" title="Inspect Scores">
+                          <FileText size={14} />
                         </button>
-                        <button className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors" title="Edit Profile">
-                          <Edit size={16} />
+                        <button className="p-1.5 text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors" title="Edit Profile">
+                          <Edit size={14} />
                         </button>
                         <button
                           onClick={() => toggleStatus(user.id, user.status)}
                           disabled={activeUserId === user.id}
-                          className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors disabled:opacity-50"
+                          className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors disabled:opacity-50"
                           title={user.status === "active" ? "Suspend User" : "Reactivate User"}
                         >
-                          <Ban size={16} />
+                          <Ban size={14} />
                         </button>
                       </div>
                     </td>

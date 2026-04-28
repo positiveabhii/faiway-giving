@@ -12,7 +12,6 @@ export const charityWriteSchema = z.object({
   image_url: z.string().trim().url(),
   tags: z.array(z.string().trim().min(1).max(40)).max(8),
   is_spotlight: z.boolean(),
-  total_raised: z.number().nonnegative().optional(),
   upcoming_events: z.number().int().nonnegative().optional(),
 });
 

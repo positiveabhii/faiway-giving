@@ -7,6 +7,7 @@ import { Ticket, Clock, CheckCircle2, AlertCircle, Loader2 } from "lucide-react"
 import { useAppData } from "@/hooks/useAppData";
 import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
+import { buildUserTicketForDraw } from "@/lib/utils/ticket-engine";
 
 export default function DashboardDrawsPage() {
   const { draws, scores, subscriptions, isLoading } = useAppData();
@@ -21,8 +22,7 @@ export default function DashboardDrawsPage() {
   const upcomingDraw = draws.find(d => d.status === "upcoming");
   const pastDraw = draws.find(d => d.status === "completed");
 
-  const userScores = scores.filter(s => s.user_id === user.id).sort((a, b) => new Date(b.played_date).getTime() - new Date(a.played_date).getTime());
-  const userNumbers = userScores.slice(0, 5).map(s => s.score_value).sort((a, b) => a - b);
+  const userNumbers = upcomingDraw ? buildUserTicketForDraw(scores, user.id, upcomingDraw.id) : [];
   const isTicketComplete = userNumbers.length === 5;
 
   return (

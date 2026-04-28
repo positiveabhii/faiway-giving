@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Button } from "@/components/ui/Button";
-import { Calendar, Trash2, AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
+import { Calendar, Trash2, AlertCircle, CheckCircle2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAppData } from "@/hooks/useAppData";
 import { useAuth } from "@/hooks/useAuth";
@@ -23,24 +23,28 @@ function ScoresSkeleton() {
 }
 
 export default function ScoresPage() {
-  const { scores, subscriptions, submitScore, removeScore, isLoading } = useAppData();
+  const { draws, scores, subscriptions, submitScore, removeScore, isLoading } = useAppData();
   const { user } = useAuth();
   const router = useRouter();
-  
+
   const [newScore, setNewScore] = useState("");
   const [newDate, setNewDate] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const userScores = scores.filter(s => s.user_id === user?.id).sort((a, b) => new Date(b.played_date).getTime() - new Date(a.played_date).getTime());
+  const upcomingDraw = draws.find(d => d.status === "upcoming");
+  const userScores = scores
+    .filter(s => s.user_id === user?.id && s.draw_id === upcomingDraw?.id)
+    .sort((a, b) => a.score_value - b.score_value)
+    .slice(0, 5);
   const userSub = subscriptions.find(s => s.user_id === user?.id);
   const isPremium = userSub?.status === 'active';
 
   const handleAddScore = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isPremium) return;
-    
+
     setError("");
     setSuccess("");
     const scoreVal = parseInt(newScore);
@@ -120,7 +124,7 @@ export default function ScoresPage() {
       </GlassCard>
 
       <div className={!isPremium ? 'opacity-20 pointer-events-none grayscale' : ''}>
-        <h3 className="text-xl font-bold text-white mb-6">Current Draw Ticket (Latest 5 Scores)</h3>
+        <h3 className="text-xl font-bold text-white mb-6">Current Draw Ticket (Best 5 Scores)</h3>
 
         {userScores.length === 0 ? (
           <GlassCard className="p-12 text-center border-white/5 border-dashed">
@@ -138,7 +142,7 @@ export default function ScoresPage() {
                       <p className="text-sm text-gray-500 mb-1">{new Date(score.played_date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</p>
                       <div className="flex items-center space-x-3">
                         <span className="text-emerald-400 text-xs px-2 py-1 bg-emerald-500/10 rounded uppercase font-bold">{score.status}</span>
-                        {index === 0 && <span className="text-gold-400 text-xs px-2 py-1 bg-gold-500/10 rounded uppercase font-bold">Latest</span>}
+                        {index === 0 && <span className="text-gold-400 text-xs px-2 py-1 bg-gold-500/10 rounded uppercase font-bold">Ticket</span>}
                       </div>
                     </div>
                     <div className="bg-charcoal-800/50 p-6 flex items-center justify-between sm:justify-end sm:w-48 sm:border-l border-white/5">

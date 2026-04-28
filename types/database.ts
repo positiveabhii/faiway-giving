@@ -30,14 +30,14 @@ export interface Database {
         Relationships: [];
       };
       charities: {
-        Row: { id: string; name: string; mission: string; image_url: string; tags: string[]; is_spotlight: boolean; total_raised: number; upcoming_events: number; created_at: string; updated_at: string };
-        Insert: { id?: string; name: string; mission: string; image_url: string; tags?: string[]; is_spotlight?: boolean; total_raised?: number; upcoming_events?: number; created_at?: string; updated_at?: string };
+        Row: { id: string; name: string; mission: string; image_url: string; tags: string[]; is_spotlight: boolean; upcoming_events: number; created_at: string; updated_at: string };
+        Insert: { id?: string; name: string; mission: string; image_url: string; tags?: string[]; is_spotlight?: boolean; upcoming_events?: number; created_at?: string; updated_at?: string };
         Update: Partial<Database['public']['Tables']['charities']['Insert']>;
         Relationships: [];
       };
       charity_donations: {
-        Row: { id: string; user_id: string; charity_id: string; amount: number; created_at: string };
-        Insert: { id?: string; user_id: string; charity_id: string; amount: number; created_at?: string };
+        Row: { id: string; user_id: string; draw_id: string | null; charity_id: string; amount: number; donation_type: 'automatic_winnings' | 'manual_direct'; source_winner_id: string | null; created_at: string; updated_at: string };
+        Insert: { id?: string; user_id: string; draw_id?: string | null; charity_id: string; amount: number; donation_type: 'automatic_winnings' | 'manual_direct'; source_winner_id?: string | null; created_at?: string; updated_at?: string };
         Update: Partial<Database['public']['Tables']['charity_donations']['Insert']>;
         Relationships: [];
       };
@@ -48,8 +48,8 @@ export interface Database {
         Relationships: [];
       };
       golf_scores: {
-        Row: { id: string; user_id: string; score_value: number; played_date: string; status: ScoreStatus; created_at: string; updated_at: string };
-        Insert: { id?: string; user_id: string; score_value: number; played_date: string; status?: ScoreStatus; created_at?: string; updated_at?: string };
+        Row: { id: string; user_id: string; draw_id: string; score_value: number; played_date: string; status: ScoreStatus; created_at: string; updated_at: string };
+        Insert: { id?: string; user_id: string; draw_id: string; score_value: number; played_date: string; status?: ScoreStatus; created_at?: string; updated_at?: string };
         Update: Partial<Database['public']['Tables']['golf_scores']['Insert']>;
         Relationships: [];
       };

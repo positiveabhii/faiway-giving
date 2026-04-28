@@ -5,6 +5,7 @@ export const mockScores: GolfScore[] = [
   {
     id: "score-1",
     user_id: "user-1",
+    draw_id: "draw-1",
     score_value: 32,
     played_date: "2026-04-20",
     status: "entered",
@@ -14,6 +15,7 @@ export const mockScores: GolfScore[] = [
   {
     id: "score-2",
     user_id: "user-1",
+    draw_id: "draw-1",
     score_value: 28,
     played_date: "2026-04-12",
     status: "entered",
@@ -23,6 +25,7 @@ export const mockScores: GolfScore[] = [
   {
     id: "score-3",
     user_id: "user-1",
+    draw_id: "draw-1",
     score_value: 40,
     played_date: "2026-04-05",
     status: "entered",
@@ -32,6 +35,7 @@ export const mockScores: GolfScore[] = [
   {
     id: "score-4",
     user_id: "user-1",
+    draw_id: "draw-1",
     score_value: 35,
     played_date: "2026-03-28",
     status: "entered",
@@ -41,6 +45,7 @@ export const mockScores: GolfScore[] = [
   {
     id: "score-5",
     user_id: "user-1",
+    draw_id: "draw-1",
     score_value: 22,
     played_date: "2026-03-15",
     status: "entered",
@@ -52,6 +57,7 @@ export const mockScores: GolfScore[] = [
   {
     id: "score-6",
     user_id: "user-3",
+    draw_id: "draw-1",
     score_value: 36,
     played_date: "2026-04-18",
     status: "entered",
@@ -63,6 +69,7 @@ export const mockScores: GolfScore[] = [
   {
     id: "score-7",
     user_id: "user-4",
+    draw_id: "draw-1",
     score_value: 42,
     played_date: "2026-04-19",
     status: "entered",

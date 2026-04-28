@@ -2,10 +2,10 @@
 
 import React, { useMemo } from "react";
 import { useAppData } from "@/context/AppDataContext";
-import { BarChart3, LineChart, PieChart, Loader2, AlertCircle } from "lucide-react";
+import { BarChart3, LineChart, PieChart, Loader2, AlertCircle, Trophy } from "lucide-react";
 
 export default function AdminReportsPage() {
-  const { users, prizePools, charities, draws, userCharitySelections, isLoading } = useAppData();
+  const { users, prizePools, charities, draws, userCharitySelections, charityDonations, isLoading } = useAppData();
 
   // 1. User Acquisition Analytics
   const acquisitionData = useMemo(() => {
@@ -168,11 +168,11 @@ export default function AdminReportsPage() {
         </div>
 
         {/* Real Prize Pool Trajectory */}
-        <div className="lg:col-span-2 bg-charcoal-900 border border-white/5 rounded-xl p-6">
+        <div className="bg-charcoal-900 border border-white/5 rounded-xl p-6">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-lg font-bold text-white flex items-center space-x-2">
               <BarChart3 className="text-gold-400" size={18} />
-              <span>Monthly Prize Pool Allocation</span>
+              <span>Prize Pool Growth</span>
             </h3>
           </div>
 
@@ -183,15 +183,14 @@ export default function AdminReportsPage() {
               <>
                 <div className="absolute left-0 top-0 bottom-6 flex flex-col justify-between text-[10px] text-gray-600">
                   <span>${maxPrize.toLocaleString()}</span>
-                  <span>${(maxPrize/2).toLocaleString()}</span>
                   <span>$0</span>
                 </div>
 
-                <div className="w-full pl-12 h-full flex items-end justify-between">
+                <div className="w-full pl-8 h-full flex items-end justify-between">
                   {prizeTrajectory.map((d, i) => {
                     const height = (d.amount / maxPrize) * 100;
                     return (
-                      <div key={i} className="w-1/12 bg-gold-500/20 hover:bg-gold-500/40 border-t-2 border-gold-500 transition-all duration-500 rounded-t relative group" style={{ height: `${Math.max(height, 2)}%` }}>
+                      <div key={i} className="w-1/12 bg-gold-500/20 border-t-2 border-gold-500 transition-all duration-500 rounded-t relative group" style={{ height: `${Math.max(height, 2)}%` }}>
                         <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-charcoal-950 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap z-10 border border-white/10">
                           ${d.amount.toLocaleString()}
                         </div>
@@ -202,9 +201,61 @@ export default function AdminReportsPage() {
               </>
             )}
           </div>
-          <div className="flex justify-between pl-12 pt-4 text-[10px] text-gray-500 font-medium">
+          <div className="flex justify-between pl-8 pt-4 text-[10px] text-gray-500 font-medium">
             {prizeTrajectory.map(d => <span key={d.month}>{d.month}</span>)}
           </div>
+        </div>
+
+        {/* Charity Donations Summary */}
+        <div className="bg-charcoal-900 border border-white/5 rounded-xl p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-lg font-bold text-white flex items-center space-x-2">
+              <Trophy className="text-gold-400" size={18} />
+              <span>Charity Impact Summary</span>
+            </h3>
+          </div>
+          
+          {(() => {
+            const stats = charities.map(c => {
+              const donations = charityDonations.filter(d => d.charity_id === c.id);
+              return {
+                ...c,
+                real_total: donations.reduce((sum, d) => sum + Number(d.amount), 0),
+                donors: new Set(donations.map(d => d.user_id)).size
+              };
+            }).sort((a, b) => b.real_total - a.real_total);
+            
+            const grandTotal = stats.reduce((sum, s) => sum + s.real_total, 0);
+
+            return (
+              <div className="space-y-6">
+                 <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-charcoal-950 p-4 rounded-lg border border-white/5">
+                      <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Total Donated</p>
+                      <p className="text-2xl font-bold text-emerald-400">${grandTotal.toLocaleString()}</p>
+                    </div>
+                    <div className="bg-charcoal-950 p-4 rounded-lg border border-white/5">
+                      <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Active Pledges</p>
+                      <p className="text-2xl font-bold text-white">{userCharitySelections.length}</p>
+                    </div>
+                 </div>
+                 <div className="bg-charcoal-950 p-4 rounded-lg border border-white/5">
+                   <h4 className="text-xs font-bold text-gray-400 mb-4 uppercase tracking-widest">Top Impact Charities</h4>
+                   <div className="space-y-3">
+                     {stats.slice(0, 3).map((c, i) => (
+                       <div key={i} className="flex justify-between items-center text-xs">
+                         <span className="text-gray-300">{c.name}</span>
+                         <div className="text-right">
+                           <span className="text-white font-medium">${c.real_total.toLocaleString()}</span>
+                           <span className="text-[10px] text-gray-500 ml-2">({c.donors} donors)</span>
+                         </div>
+                       </div>
+                     ))}
+                   </div>
+                 </div>
+              </div>
+            );
+          })()}
         </div>
 
       </div>
