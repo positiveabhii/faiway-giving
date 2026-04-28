@@ -14,7 +14,7 @@ import { useRouter } from "next/navigation";
 
 export default function LandingPage() {
   const { session, initialized, user } = useAuth();
-  const { draws, users, charities, charityDonations, isLoading: dataLoading } = useAppData();
+  const { draws, users, charityDonations, isLoading: dataLoading } = useAppData();
   const router = useRouter();
   const [introComplete, setIntroComplete] = useState(false);
 
@@ -70,7 +70,7 @@ export default function LandingPage() {
         {/* HERO SECTION */}
         <section className="relative pt-32 pb-20 md:pt-48 md:pb-32 overflow-hidden flex-1 flex flex-col justify-center">
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-charcoal-800 via-charcoal-950 to-charcoal-950 z-0"></div>
-          
+
           <div className="max-w-7xl mx-auto px-6 relative z-10 text-center">
             <motion.h1
               initial={{ opacity: 0, y: 30 }}
@@ -82,7 +82,7 @@ export default function LandingPage() {
               <span className="gold-gradient-text">Win Bigger.</span> <br className="md:hidden" />
               Give Back.
             </motion.h1>
-            
+
             <motion.p
               initial={{ opacity: 0, y: 30 }}
               animate={introComplete ? { opacity: 1, y: 0 } : {}}
@@ -91,7 +91,7 @@ export default function LandingPage() {
             >
               The exclusive membership club that transforms your golf scores into massive cash prizes and meaningful charitable impact.
             </motion.p>
-            
+
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               animate={introComplete ? { opacity: 1, y: 0 } : {}}
