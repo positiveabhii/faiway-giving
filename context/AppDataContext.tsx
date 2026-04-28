@@ -66,22 +66,26 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(true);
     console.log("[AppData] Passive fetch initiated...");
     try {
-      const charData = await charityService.getAllCharities();
+      // 1. Public Data (Always fetch)
+      const [charData, drawData, poolData] = await Promise.all([
+        charityService.getAllCharities(),
+        drawService.getAllDraws(),
+        prizeService.getAllPrizePools()
+      ]);
       setCharities(charData);
+      setDraws(drawData);
+      setPrizePools(poolData);
 
+      // 2. Auth-dependent Data
       if (userId) {
-        const [scoreData, drawData, poolData, subData, winData, notifData] = await Promise.all([
+        const [scoreData, subData, winData, notifData] = await Promise.all([
           userRole === 'admin' ? scoreService.getAllScores() : scoreService.getScoresForUser(userId),
-          drawService.getAllDraws(),
-          prizeService.getAllPrizePools(),
           prizeService.getAllSubscriptions(),
           userRole === 'admin' ? drawService.getAllWinners() : drawService.getWinnersForUser(userId),
           notificationService.getNotificationsForUser(userId)
         ]);
 
         setScores(scoreData);
-        setDraws(drawData);
-        setPrizePools(poolData);
         setSubscriptions(subData);
         setWinnings(winData);
         setNotifications(notifData);
